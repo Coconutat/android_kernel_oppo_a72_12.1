@@ -61,6 +61,8 @@ export WIFI_IP_SET=3
 export MTK_WLAN_SERVICE=yes
 export CONNAC_VER=1_0
 export CFG_BUILD_CONNAC2=false
+export CFG_FM_CHIP=mt6631
+export CFG_FM_CHIP_ID=CONSYS_6853
 
 # Do build-in for xxx.c checking
 subdir-ccflags-y += -D MTK_WCN_REMOVE_KERNEL_MODULE
