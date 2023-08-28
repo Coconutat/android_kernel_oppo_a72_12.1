@@ -1,0 +1,62 @@
+name: Build A72_C12.1 Kernel With KernelSU
+on:
+  workflow_dispatch:
+  schedule:
+      # 每周周六00:00运行. 时间设置参考： http://crontab.guru
+      - cron: '0 0 * * 6'
+  push:
+    branches:
+      - HEAD
+  pull_request:
+      branches:
+      - HEAD
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_MAXSIZE: "2G"
+      CCACHE_HARDLINK: "true"
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+        fetch-depth: 100
+
+    - name: Set up ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update -y 
+        sudo apt install gcc-aarch64-linux-gnu -y
+        sudo apt install gcc-arm-linux-gnueabi -y
+        sudo apt install binutils make python3 libssl-dev build-essential bc  bison flex unzip libssl-dev ca-certificates xz-utils mkbootimg cpio device-tree-compiler git git-lfs -y
+        git clone https://github.com/kdrag0n/proton-clang --dept=1 -b master
+        cd ..
+        git clone https://github.com/oppo-source/android_kernel_modules_oppo_mtk5g
+        cp -r $(pwd)/android_kernel_modules_oppo_mtk5g/vendor $(pwd)/vendor
+        mv android_kernel_oppo_a72_12.1 kernel-4.14
+        cd kernel-4.14
+    
+    - name: GetTime
+      id: get_time
+      run: |
+        echo "TIME=$(TZ=UTC-8 date +%m%d%H%M )" >> $GITHUB_OUTPUT
+
+    - name: Build Kernel-With-KernelSU
+      run: |
+        rm -rf KernelSU
+        rm -rf drivers/kernelsu
+        curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
+        bash build_kernel_github.sh
+        cp out/arch/arm64/boot/Image.gz-dtb tools/AnyKernel3/Image.gz-dtb
+
+    - name: Upload Kernel-with KernelSU
+      uses: actions/upload-artifact@v3
+      with:
+        name: A72_C12.1_KSU_Kernel-${{ steps.get_time.outputs.TIME }}
+        path: "tools/AnyKernel3/*"
