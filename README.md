@@ -13,3 +13,10 @@ Usage:
 **Notice:**   
 MTK WLAN,BT,GPS source port from [android_device_xiaomi_cannon](https://github.com/xiaomi-mt6853-devs/android_device_xiaomi_cannon)  
 > **OPPO Open Source version** has a large number of issues.  
+***
+This branch Support KernelSU.   
+***
+## Contributors  
+@Coconutat
+@jsbsbxjxh66
+> [jsbsbxjxh66](https://github.com/wu17481748)
