@@ -98,9 +98,8 @@ static void soc7_0asicConnac2xWfdmaManualPrefetch(
 static void soc7_0ReadIntStatus(struct ADAPTER *prAdapter,
 		uint32_t *pu4IntStatus);
 
-static void soc7_0configWfDmaIntMask(struct GLUE_INFO *prGlueInfo,
-	uint8_t ucType,
-	u_int8_t enable);
+static void configIntMask(struct GLUE_INFO *prGlueInfo,
+		u_int8_t enable);
 
 static void soc7_0asicConnac2xWpdmaConfig(struct GLUE_INFO *prGlueInfo,
 		u_int8_t enable, bool fgResetHif);
@@ -406,7 +405,6 @@ struct BUS_INFO soc7_0_bus_info = {
 	.setRxRingHwAddr = soc7_0SetRxRingHwAddr,
 	.wfdmaAllocRxRing = soc7_0WfdmaAllocRxRing,
 	.enableFwDlMode = soc7_0EnableFwDlMode,
-	.setDmaIntMask = soc7_0configWfDmaIntMask,
 #endif /*_HIF_PCIE || _HIF_AXI */
 };
 
@@ -970,9 +968,8 @@ static void soc7_0ReadIntStatus(struct ADAPTER *prAdapter,
 		WF_WFDMA_HOST_DMA0_HOST_INT_STA_ADDR, u4WrValue);
 }
 
-static void soc7_0configWfDmaIntMask(struct GLUE_INFO *prGlueInfo,
-	uint8_t ucType,
-	u_int8_t enable)
+static void configIntMask(struct GLUE_INFO *prGlueInfo,
+		u_int8_t enable)
 {
 	union WPDMA_INT_MASK IntMask;
 	uint32_t u4Addr = 0, u4Val = 0;
@@ -981,32 +978,27 @@ static void soc7_0configWfDmaIntMask(struct GLUE_INFO *prGlueInfo,
 		WF_WFDMA_HOST_DMA0_HOST_INT_ENA_CLR_ADDR;
 
 	IntMask.word = 0;
-	if (ucType & BIT(DMA_INT_TYPE_MCU2HOST))
-		IntMask.field_conn2x_single.wfdma0_mcu2host_sw_int_en = 1;
-
-	if (ucType & BIT(DMA_INT_TYPE_TRX)) {
-		IntMask.field_conn2x_single.wfdma0_rx_done_0 = 1;
-		IntMask.field_conn2x_single.wfdma0_rx_done_1 = 1;
-		IntMask.field_conn2x_single.wfdma0_rx_done_2 = 1;
-		IntMask.field_conn2x_single.wfdma0_rx_done_3 = 1;
-		IntMask.field_conn2x_single.wfdma0_tx_done_0 = 1;
-		IntMask.field_conn2x_single.wfdma0_tx_done_1 = 1;
-		IntMask.field_conn2x_single.wfdma0_tx_done_2 = 1;
-		IntMask.field_conn2x_single.wfdma0_tx_done_17 = 1;
-		IntMask.field_conn2x_single.wfdma0_tx_done_16 = 1;
-	}
+	IntMask.field_conn2x_single.wfdma0_rx_done_0 = 1;
+	IntMask.field_conn2x_single.wfdma0_rx_done_1 = 1;
+	IntMask.field_conn2x_single.wfdma0_rx_done_2 = 1;
+	IntMask.field_conn2x_single.wfdma0_rx_done_3 = 1;
+	IntMask.field_conn2x_single.wfdma0_tx_done_0 = 1;
+	IntMask.field_conn2x_single.wfdma0_tx_done_1 = 1;
+	IntMask.field_conn2x_single.wfdma0_tx_done_2 = 1;
+	IntMask.field_conn2x_single.wfdma0_tx_done_17 = 1;
+	IntMask.field_conn2x_single.wfdma0_tx_done_16 = 1;
+	IntMask.field_conn2x_single.wfdma0_mcu2host_sw_int_en = 1;
 
 	HAL_MCR_WR(prGlueInfo->prAdapter, u4Addr, IntMask.word);
 
 	HAL_MCR_RD(prGlueInfo->prAdapter,
 		   WF_WFDMA_HOST_DMA0_HOST_INT_ENA_ADDR, &u4Val);
 
-	DBGLOG(HAL, INFO,
-	       "HOST_INT_ENA(0x%08x):0x%08x, En:%u, Type:0x%x, Word:0x%08x\n",
+	DBGLOG(HAL, TRACE,
+	       "HOST_INT_STA(0x%08x):0x%08x, En:%u, Word:0x%08x\n",
 	       WF_WFDMA_HOST_DMA0_HOST_INT_ENA_ADDR,
 	       u4Val,
 	       enable,
-	       ucType,
 	       IntMask.word);
 }
 
@@ -1023,9 +1015,7 @@ static void soc7_0asicConnac2xWpdmaConfig(struct GLUE_INFO *prGlueInfo,
 	u4DmaCfgCr = asicConnac2xWfdmaCfgAddrGet(prGlueInfo, 0);
 	HAL_MCR_RD(prAdapter, u4DmaCfgCr, &GloCfg.word);
 
-	soc7_0configWfDmaIntMask(prGlueInfo,
-		BIT(DMA_INT_TYPE_MCU2HOST) | BIT(DMA_INT_TYPE_TRX),
-		enable);
+	configIntMask(prGlueInfo, enable);
 
 	if (enable) {
 		u4DmaCfgCr = asicConnac2xWfdmaCfgAddrGet(prGlueInfo, 0);
@@ -2203,7 +2193,7 @@ int32_t soc7_0_wlanPowerOnInit(void)
 		prAdapter = prGlueInfo->prAdapter;
 
 		if (prChipInfo->pwrondownload) {
-			DBGLOG_LIMITED(INIT, TRACE,
+			DBGLOG_LIMITED(INIT, INFO,
 				"[Wi-Fi PWR On] EMI download Start\n");
 
 			if (prChipInfo->pwrondownload(prAdapter,
@@ -2211,7 +2201,7 @@ int32_t soc7_0_wlanPowerOnInit(void)
 				WLAN_STATUS_SUCCESS)
 				i4Status = -ROM_PATCH_DOWNLOAD_FAIL;
 
-			DBGLOG_LIMITED(INIT, TRACE,
+			DBGLOG_LIMITED(INIT, INFO,
 				"[Wi-Fi PWR On] EMI download End\n");
 		}
 	} else {
@@ -2229,7 +2219,7 @@ int32_t soc7_0_wlanPowerOnInit(void)
 			prAdapter = prGlueInfo->prAdapter;
 
 			if (prChipInfo->pwrondownload) {
-				DBGLOG_LIMITED(INIT, TRACE,
+				DBGLOG_LIMITED(INIT, INFO,
 					"[Wi-Fi PWR On] EMI download Start\n");
 
 				if (prChipInfo->pwrondownload(prAdapter,
@@ -2237,7 +2227,7 @@ int32_t soc7_0_wlanPowerOnInit(void)
 					WLAN_STATUS_SUCCESS)
 					i4Status = -ROM_PATCH_DOWNLOAD_FAIL;
 
-				DBGLOG_LIMITED(INIT, TRACE,
+				DBGLOG_LIMITED(INIT, INFO,
 					"[Wi-Fi PWR On] EMI download End\n");
 			}
 
@@ -2559,8 +2549,6 @@ static void soc7_0_DumpOtherCr(struct ADAPTER *prAdapter)
 	DBGLOG(INIT, INFO, "0x18060010=[0x%08x]\n", u4Val);
 	connac2x_DbgCrRead(NULL, 0x180600f0, &u4Val);
 	DBGLOG(INIT, INFO, "0x180600f0=[0x%08x]\n", u4Val);
-	connac2x_DbgCrRead(prAdapter, 0x18400120, &u4Val);
-	DBGLOG(INIT, INFO, "0x18400120=[0x%08x]\n", u4Val);
 
 	set_wf_monflg_on_mailbox_wf();
 

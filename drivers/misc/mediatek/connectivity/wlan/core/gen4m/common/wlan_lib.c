@@ -489,13 +489,6 @@ struct PARAM_CUSTOM_KEY_CFG_STRUCT g_rDefaulteSetting[] = {
 	*	"Operation:default 0"
 	*   }
 	*/
-#ifdef OPLUS_WLAN_BUG_STABILITY
-	//Add for add beacon to 10+10 before disconnect to avoid multiple disconnect
-	{"ScreenOnBeaconTimeoutCount", "10"},
-	//Add for check if any data at the last 2s,if has then not disconnect
-	{"BeaconTimoutFilterDurationMs","2000"},
-#endif /* OPLUS_WLAN_BUG_STABILITY */
-
 	{"AdapScan", "0x0", WLAN_CFG_DEFAULT},
 #if CFG_SUPPORT_IOT_AP_BLACKLIST
 	/*Fill Iot AP blacklist here*/
@@ -508,25 +501,6 @@ struct PARAM_CUSTOM_KEY_CFG_STRUCT g_rDefaulteSetting[] = {
 	{"DropPacketsIPV6Low", "0x1"},
 	{"Sta2gBw", "1"},
 #endif
-#ifdef OPLUS_WLAN_BUG_STABILITY
-	//Add for: filter SSDP packets
-	{"DropPacketsIPV4Low", "0x12DE"},
-	{"DropPacketsIPV4High", "0x0"},
-
-	//Add for: filter IPV6 multicast packets
-	{"DropPacketsIPV6Low", "0x2"},
-	{"DropPacketsIPV6High", "0x0"},
-
-	//Add for: 2.4G mask invalid issue
-	{"2GTxMaskDPDOn", "1"},
-	{"2GTxPMinus1dbAtHighTemp", "1"},
-	{"TssiGroupBackupRestore", "1"},
-#endif /* OPLUS_WLAN_BUG_STABILITY */
-
-#ifdef OPLUS_WLAN_BUG_STABILITY
-	//Add for: adjust beacon miss report time as 3 seconds, 5*100ms is a round
-	{"LdtBTONullHwLifeTime", "5"},
-#endif /* OPLUS_WLAN_BUG_STABILITY */
 };
 
 /*******************************************************************************
@@ -759,10 +733,6 @@ void wlanOnPreAllocAdapterMem(IN struct ADAPTER *prAdapter,
 
 		prAdapter->u4HifDbgFlag = 0;
 		prAdapter->u4HifChkFlag = 0;
-		prAdapter->u4HifDbgParam = 0;
-		prAdapter->u4HifTxHangDumpBitmap = 0;
-		prAdapter->u4HifTxHangDumpIdx = 0;
-		prAdapter->u4HifTxHangDumpNum = 0;
 		prAdapter->u4NoMoreRfb = 0;
 		prAdapter->u4WaitRecIdx = 0;
 		prAdapter->u4CompRecIdx = 0;
@@ -6682,7 +6652,7 @@ wlanQueryLinkStats(IN struct ADAPTER *prAdapter,
 	struct CMD_GET_STATS_LLS *cmd =
 		(struct CMD_GET_STATS_LLS *)pvQueryBuffer;
 
-	DBGLOG(REQ, TRACE, "cmd: u4Tag=%08x, args=%u/%u/%u/%u, len=%u",
+	DBGLOG(REQ, INFO, "cmd: u4Tag=%08x, args=%u/%u/%u/%u, len=%u",
 			cmd->u4Tag, cmd->ucArg0, cmd->ucArg1,
 			cmd->ucArg2, cmd->ucArg3, *pu4QueryInfoLen);
 	rQuery = *cmd;
@@ -7437,7 +7407,7 @@ void wlanInitFeatureOption(IN struct ADAPTER *prAdapter)
 	prWifiVar->ucTrigMacPadDur = (uint8_t) wlanCfgGetUint32(prAdapter,
 		"TrigMacPadDur", HE_CAP_TRIGGER_PAD_DURATION_16);
 	prWifiVar->ucVcoreBoostEnable = (uint8_t) wlanCfgGetUint32(prAdapter,
-		"HeVcoreBoostEnable", FEATURE_DISABLED);
+		"ucVcoreBoostEnable", FEATURE_ENABLED);
 	prWifiVar->ucMaxAmpduLenExp = (uint8_t) wlanCfgGetUint32(prAdapter,
 		"MaxAmpduLenExt", HE_CAP_MAX_AMPDU_LEN_EXP);
 	}
@@ -7548,7 +7518,7 @@ void wlanInitFeatureOption(IN struct ADAPTER *prAdapter)
 	prWifiVar->ucStaBandwidth = (uint8_t) wlanCfgGetUint32(
 				prAdapter, "StaBw", MAX_BW_160MHZ);
 	prWifiVar->ucSta2gBandwidth = (uint8_t) wlanCfgGetUint32(
-				prAdapter, "Sta2gBw", MAX_BW_20MHZ);
+				prAdapter, "Sta2gBw", MAX_BW_40MHZ);
 	prWifiVar->ucSta5gBandwidth = (uint8_t) wlanCfgGetUint32(
 				prAdapter, "Sta5gBw", MAX_BW_160MHZ);
 	prWifiVar->ucSta6gBandwidth = (uint8_t) wlanCfgGetUint32(
@@ -7883,8 +7853,6 @@ void wlanInitFeatureOption(IN struct ADAPTER *prAdapter)
 	prAdapter->rWowCtrl.astWakeHif[0].u4GpioInterval =
 		wlanCfgGetUint32(prAdapter, "GpioInterval", 0);
 #endif
-	prWifiVar->u4TxHangFullDumpMode = wlanCfgGetUint32(
-			prAdapter, "TxHangFullDumpMode", 0);
 
 	/* SW Test Mode: Mainly used for Sigma */
 	prWifiVar->u4SwTestMode = (uint8_t) wlanCfgGetUint32(
@@ -8072,8 +8040,7 @@ void wlanInitFeatureOption(IN struct ADAPTER *prAdapter)
 		prWifiVar->fgIsBoostCpuThAdjustable  = TRUE;
 		DBGLOG(INIT, TRACE, "BoostCPUTh is not config, adjustable\n");
 	}
-	prWifiVar->au4CpuBoostMinFreq = (uint32_t)wlanCfgGetUint32(
-		prAdapter, "CpuBoostMinFreq", 1300);
+
 #if CFG_SUPPORT_LITTLE_CPU_BOOST
 	u4PlatformBoostLittleCpuTh = kalGetLittleCpuBoostThreshold();
 	prWifiVar->u4BoostLittleCpuTh =
@@ -8579,7 +8546,6 @@ void wlanCfgSetCountryCode(IN struct ADAPTER *prAdapter)
 
 		/* Force to re-search country code in regulatory domains */
 		prAdapter->prDomainInfo = NULL;
-		prAdapter->u2DomainInfoCheckForCurCountry = FALSE;
 		rlmDomainSendCmd(prAdapter);
 
 		/* Update supported channel list in channel table based on
@@ -10681,7 +10647,7 @@ wlanNotifyFwSuspend(struct GLUE_INFO *prGlueInfo,
 		/* cfg enable + wow enable => Wow On mdtim*/
 		rSuspendCmd.ucMdtim =
 			prGlueInfo->prAdapter->rWifiVar.ucWowOnMdtim;
-		DBGLOG(REQ, TRACE, "mdtim [1]\n");
+		DBGLOG(REQ, INFO, "mdtim [1]\n");
 	} else if (prGlueInfo->prAdapter->rWifiVar.ucWow
 		   && !prGlueInfo->prAdapter->rWowCtrl.fgWowEnable) {
 		if (prGlueInfo->prAdapter->rWifiVar.ucAdvPws) {
@@ -10690,7 +10656,7 @@ wlanNotifyFwSuspend(struct GLUE_INFO *prGlueInfo,
 			 */
 			rSuspendCmd.ucMdtim =
 				prGlueInfo->prAdapter->rWifiVar.ucWowOffMdtim;
-			DBGLOG(REQ, TRACE, "mdtim [2]\n");
+			DBGLOG(REQ, INFO, "mdtim [2]\n");
 		}
 	} else if (!prGlueInfo->prAdapter->rWifiVar.ucWow) {
 		if (prGlueInfo->prAdapter->rWifiVar.ucAdvPws) {
@@ -10699,7 +10665,7 @@ wlanNotifyFwSuspend(struct GLUE_INFO *prGlueInfo,
 			 */
 			rSuspendCmd.ucMdtim =
 				prGlueInfo->prAdapter->rWifiVar.ucWowOffMdtim;
-			DBGLOG(REQ, TRACE, "mdtim [3]\n");
+			DBGLOG(REQ, INFO, "mdtim [3]\n");
 		}
 	}
 
@@ -11632,7 +11598,7 @@ wlanGetSpeIdx(IN struct ADAPTER *prAdapter,
 			ucRetValSpeIdx = wlanAntPathFavorSelect(prAdapter,
 				eWfPathFavor);
 	}
-	DBGLOG(INIT, INFO, "SpeIdx:%d,D:%d,G=%d,B=%d,Bss=%d\n",
+	DBGLOG(INIT, TRACE, "SpeIdx:%d,D:%d,G=%d,B=%d,Bss=%d\n",
 	       ucRetValSpeIdx, prAdapter->rWifiVar.fgDbDcModeEn,
 	       prBssInfo->fgIsGranted, eBand, ucBssIndex);
 #endif
@@ -11936,9 +11902,7 @@ uint32_t wlanSetLowLatencyMode(
 			prAisBssInfo->ucBssIndex))
 		fgEnMode = TRUE; /* It will enable low latency mode */
 
-
 	if (fgEnMode != prAdapter->fgEnLowLatencyMode) {
-		prAdapter->fgEnLowLatencyMode = fgEnMode;
 		if (!fgEnMode && (MEDIA_STATE_CONNECTED
 			== kalGetMediaStateIndicated(prAdapter->prGlueInfo,
 			prAisBssInfo->ucBssIndex)))
@@ -12021,6 +11985,9 @@ uint32_t wlanSetLowLatencyMode(
 		#endif
 
 	}
+
+	if (fgEnMode != prAdapter->fgEnLowLatencyMode)
+		prAdapter->fgEnLowLatencyMode = fgEnMode;
 
 	DBGLOG(OID, INFO,
 		"LowLatency(gaming) fgEnMode=[%d]\n", fgEnMode);
@@ -12348,26 +12315,13 @@ uint64_t wlanGetSupportedFeatureSet(IN struct GLUE_INFO *prGlueInfo)
 {
 	uint64_t u8FeatureSet = WIFI_HAL_FEATURE_SET;
 	struct REG_INFO *prRegInfo;
-	#ifdef OPLUS_BUG_COMPATIBILITY
-	//Add for: inform if DBDC supports
-	struct ADAPTER *prAdapter;
-	#endif /* OPLUS_BUG_COMPATIBILITY */
 
 	prRegInfo = &(prGlueInfo->rRegInfo);
 	if ((prRegInfo != NULL) && (prRegInfo->ucSupport5GBand))
 		u8FeatureSet |= WIFI_FEATURE_INFRA_5G;
 
-	#ifdef OPLUS_BUG_COMPATIBILITY
-	//Add for: inform if DBDC supports
-	prAdapter = prGlueInfo->prAdapter;
-    if (prAdapter != NULL &&
-        prAdapter->rWifiVar.eDbdcMode == ENUM_DBDC_MODE_DYNAMIC) {
-		u8FeatureSet |= WIFI_FEATURE_DBDC;
-	}
-	#endif /* OPLUS_BUG_COMPATIBILITY */
 #if CFG_SUPPORT_LLS
-	if (prGlueInfo && prGlueInfo->prAdapter &&
-	    prGlueInfo->prAdapter->pucLinkStatsSrcBufferAddr)
+	if (prGlueInfo->prAdapter->pucLinkStatsSrcBufferAddr)
 		u8FeatureSet |= WIFI_FEATURE_LINK_LAYER_STATS;
 #endif
 

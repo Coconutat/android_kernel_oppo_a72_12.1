@@ -142,9 +142,6 @@ static ssize_t fw_log_wifi_read(struct file *filp, char __user *buf, size_t len,
 	size_t ret = 0;
 
 	WIFI_INFO_FUNC_LIMITED("fw_log_wifi_read len --> %d\n", (uint32_t) len);
-	WIFI_INFO_FUNC_LIMITED("WIFI_FW_LOG_IOCTL_ON_OFF result=%d, last value=%d\n",
-						gFwLogOnOffStatus, gLastFWLogOnOff);
-
 	ret = connsys_log_read_to_user(CONNLOG_TYPE_WIFI, buf, len);
 
 	return ret;

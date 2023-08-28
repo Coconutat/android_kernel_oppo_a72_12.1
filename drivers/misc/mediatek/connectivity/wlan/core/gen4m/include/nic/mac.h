@@ -1189,8 +1189,6 @@
 	88 /* MSCS Descriptor */
 #define ELEM_EXT_ID_SUPPLEMENTAL_CLASS2_CAP \
 	90 /* Supplemental Class 2 Capabilities */
-#define ELEM_EXT_ID_SUPPLEMENTAL_CLASS2_CAP \
-	90 /* Supplemental Class 2 Capabilities */
 
 /* 802.11-2020: Table 9-34 Association Request frame body */
 
@@ -1405,7 +1403,6 @@ enum BEACON_REPORT_DETAIL {
 #define ELEM_EXT_CAP_SERVICE_INTERVAL_GRANULARITY   BIT(5)
 #define ELEM_EXT_CAP_SCHEDULE_PSMP                  BIT(6)
 
-#define ELEM_EXT_CAP_20_40_COEXIST_SUPPORT_BIT      0
 #define ELEM_EXT_CAP_BSS_TRANSITION_BIT             19
 #define ELEM_EXT_CAP_MBSSID_BIT                     22
 #define ELEM_EXT_CAP_UTC_TSF_OFFSET_BIT             27

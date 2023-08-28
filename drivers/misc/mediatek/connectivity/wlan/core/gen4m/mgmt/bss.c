@@ -225,7 +225,7 @@ struct APPEND_VAR_IE_ENTRY txProbRspIETable[] = {
 	   rlmGenerateMTKOuiIE}	/* 221 */
 #endif
 	, {(ELEM_HDR_LEN + ELEM_MAX_LEN_RSN), NULL,
-	   rsnGenerateRSNXIE}   /* 244 */
+	   rsnGenerateRSNXIE}	/* 244 */
 	, {(ELEM_HDR_LEN + ELEM_MAX_LEN_WPA), NULL,
 	   rsnGenerateOWEIE}
 };

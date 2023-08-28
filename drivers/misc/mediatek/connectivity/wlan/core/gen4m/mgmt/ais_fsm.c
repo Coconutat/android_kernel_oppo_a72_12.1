@@ -822,10 +822,6 @@ void aisFsmStateInit_JOIN(IN struct ADAPTER *prAdapter,
 
 		/* We do roaming while the medium is connected */
 		prStaRec->fgIsReAssoc = TRUE;
-        if (prStaRec->ucStaState != STA_STATE_1) {
-            prStaRec->ucStaState = STA_STATE_1;
-            cnmStaRecChangeState(prAdapter, prStaRec, STA_STATE_1);
-        }
 
 		/* TODO(Kevin): We may call a sub function to
 		 * acquire the Roaming Auth Type
@@ -1508,11 +1504,10 @@ enum ENUM_AIS_STATE aisSearchHandleBssDesc(IN struct ADAPTER *prAdapter,
 			return AIS_STATE_NORMAL_TR;
 		}
 
- #define BSS_DESC_BAD_CASE \
- 	(!prBssDesc || ((prBssDesc->fgIsConnected & BIT(ucBssIndex)) && \
-	prConnSettings->eConnectionPolicy != CONNECT_BY_BSSID && \
-	prConnSettings->eConnectionPolicy != CONNECT_BY_BSSID_HINT) || \
- 	prBssDesc->eBSSType != BSS_TYPE_INFRASTRUCTURE)
+#define BSS_DESC_BAD_CASE \
+	(!prBssDesc || ((prBssDesc->fgIsConnected & BIT(ucBssIndex)) && \
+	prConnSettings->eConnectionPolicy != CONNECT_BY_BSSID) || \
+	prBssDesc->eBSSType != BSS_TYPE_INFRASTRUCTURE)
 		/* 4 <3.a> Following cases will go back to NORMAL_TR.
 		 * Precondition: not user space triggered roaming
 		 *
@@ -2300,8 +2295,8 @@ void aisFsmSteps(IN struct ADAPTER *prAdapter,
 				prMsgChReq->eRfChannelWidth);
 
 			DBGLOG(RLM, INFO,
-			       "AIS req CH for CH:%d, BW(VHT):%d, s1=%d\n",
-			       prMsgChReq->ucPrimaryChannel,
+			       "AIS req CH for CH:%d, Bw:%d, s1=%d\n",
+			       prAisBssInfo->ucPrimaryChannel,
 			       prMsgChReq->eRfChannelWidth,
 			       prMsgChReq->ucRfCenterFreqSeg1);
 			prMsgChReq->ucRfCenterFreqSeg2 = 0;
@@ -2546,18 +2541,20 @@ enum ENUM_AIS_STATE aisFsmStateSearchAction(
 void aisFsmQueryCandidates(IN struct ADAPTER *prAdapter, uint8_t ucBssIndex)
 {
 #if CFG_SUPPORT_802_11K
+	struct ROAMING_INFO *prRoamingFsmInfo;
 	struct STA_RECORD *prStaRec;
 	struct BSS_DESC *prBssDesc;
 
+	prRoamingFsmInfo = aisGetRoamingInfo(prAdapter, ucBssIndex);
 	prBssDesc = aisGetTargetBssDesc(prAdapter, ucBssIndex);
 	prStaRec = aisGetStaRecOfAP(prAdapter, ucBssIndex);
 
-	if (prBssDesc && !prBssDesc->fgQueriedCandidates) {
+	if (!prBssDesc->fgQueriedCandidates) {
 		prBssDesc->fgQueriedCandidates = TRUE;
 
 		aisResetNeighborApList(prAdapter, ucBssIndex);
 
-		if (prBssDesc->aucRrmCap[0] &
+		if (prBssDesc && prBssDesc->aucRrmCap[0] &
 		    BIT(RRM_CAP_INFO_NEIGHBOR_REPORT_BIT))
 			aisSendNeighborRequest(prAdapter, ucBssIndex);
 #if CFG_SUPPORT_802_11V_BTM_OFFLOAD

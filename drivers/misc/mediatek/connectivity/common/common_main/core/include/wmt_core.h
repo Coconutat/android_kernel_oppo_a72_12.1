@@ -569,8 +569,6 @@ extern UINT32 wmt_core_get_blank_status(VOID);
 
 INT32 wmt_blank_status_ctrl(UINT32 on_off_flag);
 
-void wmt_send_bt_tssi_cmd(void);
-
 /*******************************************************************************
 *                              F U N C T I O N S
 ********************************************************************************

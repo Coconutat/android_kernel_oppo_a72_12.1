@@ -228,9 +228,6 @@
 
 #define MSDU_TOKEN_HISTORY_NUM 5
 
-#define LOG_DUMP_COUNT_PERIOD		5
-#define LOG_DUMP_FULL_DUMP_TIMES	2
-
 /*******************************************************************************
  *                                 M A C R O S
  *******************************************************************************
@@ -405,8 +402,6 @@ struct RTMP_RX_RING {
 	uint32_t hw_cnt_addr;
 	bool fgIsDumpLog;
 	uint32_t u4PendingCnt;
-	void *pvPacket;
-	uint32_t u4PacketLen;
 };
 
 struct PCIE_CHIP_CR_MAPPING {
@@ -532,12 +527,6 @@ struct SW_WFDMA_INFO {
 	uint32_t u4DmaIdxBackup;
 	uint32_t u4MaxCnt;
 	uint8_t aucCID[SW_WFDMA_CMD_NUM];
-};
-
-enum ENUM_DMA_INT_TYPE {
-	DMA_INT_TYPE_MCU2HOST,
-	DMA_INT_TYPE_TRX,
-	DMA_INT_TYPE_NUM
 };
 
 /*******************************************************************************

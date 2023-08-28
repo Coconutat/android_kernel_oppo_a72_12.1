@@ -1134,7 +1134,7 @@ void halAddDriverLatencyCount(IN struct ADAPTER *prAdapter,
 	int i;
 
 	for (i = 0; i < LATENCY_STATS_MAX_SLOTS; i++, pDriverDelay++) {
-		if (u4DriverLatency <= *pMaxDriverDelay++) {
+		if (u4DriverLatency < *pMaxDriverDelay++) {
 			GLUE_INC_REF_CNT(*pDriverDelay);
 			break;
 		}
@@ -1482,9 +1482,6 @@ void halRxReceiveRFBs(IN struct ADAPTER *prAdapter, uint32_t u4Port,
 
 	DBGLOG(RX, TEMP, "halRxReceiveRFBs: u4RxCnt:%d\n", u4RxCnt);
 
-	/* unset no more rfb port bit */
-	prAdapter->u4NoMoreRfb &= ~BIT(u4Port);
-
 	KAL_ACQUIRE_SPIN_LOCK(prAdapter, SPIN_LOCK_RX_FREE_QUE);
 	for (u4RfbCnt = 0; u4RfbCnt < u4RxCnt; u4RfbCnt++) {
 		QUEUE_REMOVE_HEAD(&prRxCtrl->rFreeSwRfbList,
@@ -1509,6 +1506,9 @@ void halRxReceiveRFBs(IN struct ADAPTER *prAdapter, uint32_t u4Port,
 		QUEUE_REMOVE_HEAD(&rFreeSwRfbList, prSwRfb, struct SW_RFB *);
 		if (!prSwRfb)
 			break;
+
+		/* unset no more rfb port bit */
+		prAdapter->u4NoMoreRfb &= ~BIT(u4Port);
 
 		if (fgRxData) {
 			fgStatus = kalDevReadData(prAdapter->prGlueInfo,
@@ -1573,12 +1573,9 @@ void halRxReceiveRFBs(IN struct ADAPTER *prAdapter, uint32_t u4Port,
 	kalDevRegWrite(prAdapter->prGlueInfo, prRxRing->hw_cidx_addr,
 		       prRxRing->RxCpuIdx);
 
-	KAL_ACQUIRE_SPIN_LOCK(prAdapter, SPIN_LOCK_RX_FREE_QUE);
+	KAL_ACQUIRE_SPIN_LOCK(prAdapter, SPIN_LOCK_RX_QUE);
 	QUEUE_CONCATENATE_QUEUES(&prRxCtrl->rFreeSwRfbList,
 		&rFreeSwRfbList);
-	KAL_RELEASE_SPIN_LOCK(prAdapter, SPIN_LOCK_RX_FREE_QUE);
-
-	KAL_ACQUIRE_SPIN_LOCK(prAdapter, SPIN_LOCK_RX_QUE);
 	QUEUE_CONCATENATE_QUEUES(&prRxCtrl->rReceivedRfbList,
 		&rReceivedRfbList);
 	KAL_RELEASE_SPIN_LOCK(prAdapter, SPIN_LOCK_RX_QUE);
@@ -1760,8 +1757,6 @@ bool halWpdmaAllocRxRing(struct GLUE_INFO *prGlueInfo, uint32_t u4Num,
 	pRxRing->u4BufSize = u4BufSize;
 	pRxRing->u4RingSize = u4Size;
 	pRxRing->fgRxSegPkt = FALSE;
-	pRxRing->pvPacket = NULL;
-	pRxRing->u4PacketLen = 0;
 
 	for (u4Idx = 0; u4Idx < u4Size; u4Idx++) {
 		/* Init RX Ring Size, Va, Pa variables */
@@ -1862,7 +1857,7 @@ bool halWpdmaAllocRing(struct GLUE_INFO *prGlueInfo, bool fgAllocMem)
 	/* Data Rx path */
 	if (!halWpdmaAllocRxRing(prGlueInfo, RX_RING_DATA_IDX_0,
 				 RX_RING0_SIZE, RXD_SIZE,
-				 CFG_RX_MAX_MPDU_SIZE, fgAllocMem)) {
+				 CFG_RX_MAX_PKT_SIZE, fgAllocMem)) {
 		DBGLOG(HAL, ERROR, "AllocRxRing[0] fail\n");
 		return false;
 	}
@@ -2242,23 +2237,17 @@ void halWpdmaProcessDataDmaDone(IN struct GLUE_INFO *prGlueInfo,
 
 	if (u4DmaIdx > u4SwIdx) {
 		u4Diff = u4DmaIdx - u4SwIdx;
+		prTxRing->u4UsedCnt -= u4Diff;
 	} else if (u4DmaIdx < u4SwIdx) {
 		u4Diff = (TX_RING_SIZE + u4DmaIdx) - u4SwIdx;
+		prTxRing->u4UsedCnt -= u4Diff;
 	} else {
 		/* DMA index == SW used index */
-		if (prTxRing->u4UsedCnt == TX_RING_SIZE)
+		if (prTxRing->u4UsedCnt == TX_RING_SIZE) {
 			u4Diff = TX_RING_SIZE;
+			prTxRing->u4UsedCnt = 0;
+		}
 	}
-
-	if (u4Diff > prTxRing->u4UsedCnt) {
-		DBGLOG(HAL, ERROR,
-		       "port[%u] diff[%u] > UsedCnt[%u], trigger Drv SER\n",
-		       u2Port, u4Diff, prTxRing->u4UsedCnt);
-		halSetDrvSer(prGlueInfo->prAdapter);
-		return;
-	}
-
-	prTxRing->u4UsedCnt -= u4Diff;
 
 	DBGLOG_LIMITED(HAL, TRACE,
 		"DMA done: port[%u] dma[%u] idx[%u] used[%u]\n", u2Port,
@@ -3258,10 +3247,8 @@ uint32_t halHifPowerOffWifi(IN struct ADAPTER *prAdapter)
 
 	rStatus = wlanCheckWifiFunc(prAdapter, FALSE);
 
-	if (prBusInfo->setDmaIntMask)
-		prBusInfo->setDmaIntMask(prAdapter->prGlueInfo,
-			BIT(DMA_INT_TYPE_MCU2HOST) | BIT(DMA_INT_TYPE_TRX),
-			FALSE);
+	if (prBusInfo->setPdmaIntMask)
+		prBusInfo->setPdmaIntMask(prAdapter->prGlueInfo, FALSE);
 
 	nicDisableInterrupt(prAdapter);
 	if (prBusInfo->disableSwInterrupt)

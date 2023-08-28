@@ -632,8 +632,7 @@ static void configPdmaRxRingThreshold(struct GLUE_INFO *prGlueInfo)
 }
 
 void asicPdmaIntMaskConfig(struct GLUE_INFO *prGlueInfo,
-	uint8_t ucType,
-	u_int8_t fgEnable)
+		u_int8_t fgEnable)
 {
 	struct BUS_INFO *prBusInfo =
 			prGlueInfo->prAdapter->chip_info->bus_info;
@@ -642,38 +641,29 @@ void asicPdmaIntMaskConfig(struct GLUE_INFO *prGlueInfo,
 	kalDevRegRead(prGlueInfo, WPDMA_INT_MSK, &IntMask.word);
 
 	if (fgEnable == TRUE) {
-		if (ucType & BIT(DMA_INT_TYPE_MCU2HOST))
-			IntMask.field_conn.mcu2host_sw_int_ena = 1;
-		if (ucType & BIT(DMA_INT_TYPE_TRX)) {
-			IntMask.field.rx_done_0 = 1;
-			IntMask.field.rx_done_1 = 1;
-			IntMask.field.tx_done =
-				BIT(prBusInfo->tx_ring_fwdl_idx) |
-				BIT(prBusInfo->tx_ring_cmd_idx) |
-				BIT(prBusInfo->tx_ring0_data_idx) |
-				BIT(prBusInfo->tx_ring1_data_idx) |
-				BIT(prBusInfo->tx_ring2_data_idx);
-			IntMask.field_conn.tx_coherent = 0;
-			IntMask.field_conn.rx_coherent = 0;
-			IntMask.field_conn.tx_dly_int = 0;
-			IntMask.field_conn.rx_dly_int = 0;
-		}
+		IntMask.field.rx_done_0 = 1;
+		IntMask.field.rx_done_1 = 1;
+		IntMask.field.tx_done =
+			BIT(prBusInfo->tx_ring_fwdl_idx) |
+			BIT(prBusInfo->tx_ring_cmd_idx) |
+			BIT(prBusInfo->tx_ring0_data_idx) |
+			BIT(prBusInfo->tx_ring1_data_idx) |
+			BIT(prBusInfo->tx_ring2_data_idx);
+		IntMask.field_conn.tx_coherent = 0;
+		IntMask.field_conn.rx_coherent = 0;
+		IntMask.field_conn.tx_dly_int = 0;
+		IntMask.field_conn.rx_dly_int = 0;
+		IntMask.field_conn.mcu2host_sw_int_ena = 1;
 	} else {
-		if (ucType & BIT(DMA_INT_TYPE_MCU2HOST))
-			IntMask.field_conn.mcu2host_sw_int_ena = 0;
-		if (ucType & BIT(DMA_INT_TYPE_TRX)) {
-			IntMask.field_conn.rx_done_0 = 0;
-			IntMask.field_conn.rx_done_1 = 0;
-			IntMask.field_conn.tx_done = 0;
-			IntMask.field_conn.tx_coherent = 0;
-			IntMask.field_conn.rx_coherent = 0;
-			IntMask.field_conn.tx_dly_int = 0;
-			IntMask.field_conn.rx_dly_int = 0;
-		}
+		IntMask.field_conn.rx_done_0 = 0;
+		IntMask.field_conn.rx_done_1 = 0;
+		IntMask.field_conn.tx_done = 0;
+		IntMask.field_conn.tx_coherent = 0;
+		IntMask.field_conn.rx_coherent = 0;
+		IntMask.field_conn.tx_dly_int = 0;
+		IntMask.field_conn.rx_dly_int = 0;
+		IntMask.field_conn.mcu2host_sw_int_ena = 0;
 	}
-
-	DBGLOG(HAL, INFO, "type:0x%x, enable:%u, mask:0x%08x\n",
-		ucType, fgEnable, IntMask.word);
 
 	kalDevRegWrite(prGlueInfo, WPDMA_INT_MSK, IntMask.word);
 }
@@ -686,9 +676,7 @@ void asicPdmaConfig(struct GLUE_INFO *prGlueInfo, u_int8_t fgEnable,
 	union WPDMA_GLO_CFG_STRUCT GloCfg;
 	uint32_t u4Val = 0;
 
-	asicPdmaIntMaskConfig(prGlueInfo,
-		BIT(DMA_INT_TYPE_MCU2HOST) | BIT(DMA_INT_TYPE_TRX),
-		fgEnable);
+	asicPdmaIntMaskConfig(prGlueInfo, fgEnable);
 	kalDevRegRead(prGlueInfo, WPDMA_GLO_CFG, &GloCfg.word);
 
 	if (fgEnable == TRUE) {

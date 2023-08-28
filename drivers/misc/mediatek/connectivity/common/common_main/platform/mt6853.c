@@ -30,8 +30,6 @@
 /* if clock of TCXO is controlled by GPIO, CLK_CTRL_TCXOENA_REQ should be 1. */
 #define CLK_CTRL_TCXOENA_REQ 0
 
-#define VCN33_1_VOL  3500000
-
 /*******************************************************************************
 *                    E X T E R N A L   R E F E R E N C E S
 ********************************************************************************
@@ -201,9 +199,6 @@ static struct regulator *reg_VCN33_1_WIFI;
 static struct regulator *reg_VCN33_2_WIFI;
 #endif
 
-extern int g_mapped_reg_table_sz_mt6853;
-extern REG_MAP_ADDR g_mapped_reg_table_mt6853[];
-
 static EMI_CTRL_STATE_OFFSET mtk_wcn_emi_state_off = {
 	.emi_apmem_ctrl_state = EXP_APMEM_CTRL_STATE,
 	.emi_apmem_ctrl_host_sync_state = EXP_APMEM_CTRL_HOST_SYNC_STATE,
@@ -308,9 +303,6 @@ WMT_CONSYS_IC_OPS consys_ic_ops_mt6853 = {
 
 	.consys_ic_jtag_set_for_mcu = consys_jtag_set_for_mcu,
 	.consys_ic_jtag_flag_ctrl = consys_jtag_flag_ctrl,
-
-	.consys_ic_get_debug_reg_ary_size = &g_mapped_reg_table_sz_mt6853,
-	.consys_ic_get_debug_reg_ary = g_mapped_reg_table_mt6853,
 };
 
 static const struct connlog_emi_config connsys_fw_log_parameter = {
@@ -1306,7 +1298,7 @@ static VOID consys_hw_vcn33_primary_rc_mode_enable(VOID)
 	KERNEL_pmic_set_register_value(PMIC_RG_LDO_VCN33_1_LP, 0);
 #endif
 	if (reg_VCN33_1_BT) {
-		regulator_set_voltage(reg_VCN33_1_BT, VCN33_1_VOL, VCN33_1_VOL);
+		regulator_set_voltage(reg_VCN33_1_BT, 3300000, 3300000);
 		if (regulator_enable(reg_VCN33_1_BT))
 			WMT_PLAT_PR_INFO("WMT do WIFI PMIC on fail!\n");
 	}
@@ -1335,7 +1327,7 @@ static VOID consys_hw_vcn33_primary_legacy_mode_enable(VOID)
 #endif
 	/*Set VCN33_1_SW_EN as 1 and set votage as 3V3*/
 	if (reg_VCN33_1_BT) {
-		regulator_set_voltage(reg_VCN33_1_BT, VCN33_1_VOL, VCN33_1_VOL);
+		regulator_set_voltage(reg_VCN33_1_BT, 3300000, 3300000);
 		if (regulator_enable(reg_VCN33_1_BT))
 			WMT_PLAT_PR_INFO("WMT do WIFI PMIC on fail!\n");
 	}
@@ -1798,14 +1790,14 @@ static INT32 consys_hw_bt_vcn33_ctrl(UINT32 enable)
 			WMT_PLAT_PR_INFO("Turn on reg_VCN33_1_BT in RC mode\n");
 			consys_hw_bt_vcn33_rc_mode_enable();
 			if (reg_VCN33_1_BT)
-				regulator_set_voltage(reg_VCN33_1_BT, VCN33_1_VOL, VCN33_1_VOL);
+				regulator_set_voltage(reg_VCN33_1_BT, 3300000, 3300000);
 		} else {
 			WMT_PLAT_PR_INFO("Turn on reg_VCN33_1_BT in legacy mode\n");
 			consys_hw_bt_vcn33_legacy_mode_enable();
 
 			/*Set VCN33_1_SW_EN as 1 and set votage as 3V3*/
 			if (reg_VCN33_1_BT) {
-				regulator_set_voltage(reg_VCN33_1_BT, VCN33_1_VOL, VCN33_1_VOL);
+				regulator_set_voltage(reg_VCN33_1_BT, 3300000, 3300000);
 				if (regulator_enable(reg_VCN33_1_BT))
 					WMT_PLAT_PR_INFO("WMT do WIFI PMIC on fail!\n");
 			}
@@ -1834,7 +1826,7 @@ static VOID consys_hw_wifi_vcn33_rc_mode_enable(VOID)
 			PMIC_RG_LDO_VCN33_1_LP_MASK << PMIC_RG_LDO_VCN33_1_LP_SHIFT,
 			0 << PMIC_RG_LDO_VCN33_1_LP_SHIFT);
 
-		regulator_set_voltage(reg_VCN33_1_WIFI, VCN33_1_VOL, VCN33_1_VOL);
+		regulator_set_voltage(reg_VCN33_1_WIFI, 3300000, 3300000);
 
 		regmap_write(g_regmap, PMIC_RG_LDO_VCN33_2_OP_EN_SET_ADDR, 1 << 6);
 		regmap_write(g_regmap, PMIC_RG_LDO_VCN33_2_OP_CFG_SET_ADDR, 0 << 6);
@@ -1853,7 +1845,7 @@ static VOID consys_hw_wifi_vcn33_rc_mode_enable(VOID)
 	/* SW_LP =0 */
 	KERNEL_pmic_set_register_value(PMIC_RG_LDO_VCN33_1_LP, 0);
 
-	regulator_set_voltage(reg_VCN33_1_WIFI, VCN33_1_VOL, VCN33_1_VOL);
+	regulator_set_voltage(reg_VCN33_1_WIFI, 3300000, 3300000);
 
 	/*  PMRC_EN[6]  HW_OP_EN = 1, HW_OP_CFG = 0  */
 	KERNEL_pmic_ldo_vcn33_2_lp(SRCLKEN6, 0, 1, HW_OFF);
@@ -1878,7 +1870,7 @@ static VOID consys_hw_wifi_vcn33_legacy_mode_enable(VOID)
 
 		/*Set VCN33_1_SW_EN as 1 and set votage as 3V3*/
 		if (reg_VCN33_1_WIFI) {
-			regulator_set_voltage(reg_VCN33_1_WIFI, VCN33_1_VOL, VCN33_1_VOL);
+			regulator_set_voltage(reg_VCN33_1_WIFI, 3300000, 3300000);
 			if (regulator_enable(reg_VCN33_1_WIFI))
 				WMT_PLAT_PR_INFO("WMT do WIFI PMIC on fail!\n");
 		}
@@ -1904,7 +1896,7 @@ static VOID consys_hw_wifi_vcn33_legacy_mode_enable(VOID)
 
 	/*Set VCN33_1_SW_EN as 1 and set votage as 3V3*/
 	if (reg_VCN33_1_WIFI) {
-		regulator_set_voltage(reg_VCN33_1_WIFI, VCN33_1_VOL, VCN33_1_VOL);
+		regulator_set_voltage(reg_VCN33_1_WIFI, 3300000, 3300000);
 		if (regulator_enable(reg_VCN33_1_WIFI))
 			WMT_PLAT_PR_INFO("WMT do WIFI PMIC on fail!\n");
 	}
@@ -3111,3 +3103,4 @@ INT32 consys_ipi_timeout_dump(VOID)
 {
 	return consys_common_dump("ipi_timeout");
 }
+

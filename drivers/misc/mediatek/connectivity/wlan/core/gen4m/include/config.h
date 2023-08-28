@@ -517,15 +517,6 @@
 /* TODO: it should be 4096 under emulation mode */
 #define CFG_RX_MAX_PKT_SIZE	(28 + 2312 + 12 /*HIF_RX_HEADER_T*/)
 
-#define CFG_SUPPORT_SNIFFER_RADIOTAP_13K	0
-#ifdef CFG_SUPPORT_SNIFFER_RADIOTAP
-#define CFG_RADIOTAP_HEADROOM	72
-#endif
-#if CFG_SUPPORT_SNIFFER_RADIOTAP_13K
-#define CFG_RX_MAX_MPDU_SIZE	13312 /* support amsdu 7 */
-#else
-#define CFG_RX_MAX_MPDU_SIZE	CFG_RX_MAX_PKT_SIZE
-#endif
 /*! Minimum RX packet size, if lower than this value, drop incoming packet */
 #define CFG_RX_MIN_PKT_SIZE	10 /*!< 802.11 Control Frame is 10 bytes */
 
@@ -945,6 +936,8 @@
 
 #define CFG_SUPPORT_P2P_RSSI_QUERY		0
 
+#define CFG_SUPPORT_RSSI_DISCONNECT    1
+
 #define CFG_SUPPORT_P2P_GO_OFFLOAD_PROBE_RSP	0
 
 #define CFG_SHOW_MACADDR_SOURCE			1
@@ -1054,12 +1047,7 @@
 
 #define CFG_FIX_2_TX_PORT			0
 
-#ifndef OPLUS_WLAN_BUG_STABILITY
-//Modify for disable arp vo setting
-#define CFG_CHANGE_CRITICAL_PACKET_PRIORITY     1
-#else  /* OPLUS_WLAN_BUG_STABILITY */
-#define CFG_CHANGE_CRITICAL_PACKET_PRIORITY     0
-#endif /* OPLUS_WLAN_BUG_STABILITY */
+#define CFG_CHANGE_CRITICAL_PACKET_PRIORITY	1
 
 /*------------------------------------------------------------------------------
  * Flags of bus error tolerance
@@ -1101,7 +1089,7 @@
 
 #define CFG_SUPPORT_TX_LATENCY_STATS 1
 
-#define CFG_SUPPORT_LLS 1
+#define CFG_SUPPORT_LLS 0
 
 /*------------------------------------------------------------------------------
  * Flags for prepare the FW compile flag
@@ -1167,6 +1155,12 @@
  *------------------------------------------------------------------------------
  */
 #define CFG_SUPPORT_SCAN_RANDOM_MAC        (1)
+
+/*------------------------------------------------------------------------------
+ * Flags of Sniffer SUPPORT
+ *------------------------------------------------------------------------------
+ */
+#define CFG_SUPPORT_SNIFFER                 1
 
 #define WLAN_INCLUDE_PROC                   1
 
@@ -1420,12 +1414,7 @@
  * in mtk_cfg80211_get_station
  *------------------------------------------------------------------------------
  */
-#ifndef OPLUS_WLAN_BUG_STABILITY
-//Modify for show max tx rate
 #define CFG_REPORT_MAX_TX_RATE	0
-#else  /* OPLUS_WLAN_BUG_STABILITY */
-#define CFG_REPORT_MAX_TX_RATE	1
-#endif /* OPLUS_WLAN_BUG_STABILITY */
 
 /*------------------------------------------------------------------------------
  * Link Quality Monitor
@@ -1506,10 +1495,6 @@
 #define CFG_ROM_PATCH_NO_SEM_CTRL 0
 #endif
 
-#ifndef CFG_SUPPORT_MDDP_AOR
-#define CFG_SUPPORT_MDDP_AOR 0
-#endif
-
 /*------------------------------------------------------------------------------
  * Flags of Disconnect with disable channel based on REGD update
  *------------------------------------------------------------------------------
@@ -1523,19 +1508,14 @@
  * issues, eg. cross band switch.
  *------------------------------------------------------------------------------
  */
-#define CFG_SEND_DEAUTH_DURING_CHNL_SWITCH    0
+#define CFG_SEND_DEAUTH_DURING_CHNL_SWITCH    1
 
 /*------------------------------------------------------------------------------
  *Smart Gear Feature Configure
  *------------------------------------------------------------------------------
 */
 #ifndef CFG_SUPPORT_SMART_GEAR
-#ifdef OPLUS_BUG_STABILITY
-//enable smart gear by default
 #define CFG_SUPPORT_SMART_GEAR 1
-#else
-#define CFG_SUPPORT_SMART_GEAR 0
-#endif /* OPLUS_BUG_STABILITY */
 #endif
 
 #define CFG_SUPPORT_WIFI_RNR  1

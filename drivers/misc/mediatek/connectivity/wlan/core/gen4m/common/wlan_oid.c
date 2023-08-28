@@ -9629,15 +9629,12 @@ wlanoidSetNetworkAddress(IN struct ADAPTER *prAdapter,
 					sizeof(uint32_t));
 
 				DBGLOG(OID, INFO,
-				"%s:IPv4 Addr[%u]["IPV4STR"]Mask["IPV4STR
-				"]BSS[%d] ver[%d]\n",
+				"%s:IPv4 Addr[%u]["IPV4STR"]Mask["IPV4STR"]\n",
 				__func__,
 				u4IPv4AddrIdx,
 				IPV4TOSTR(prNetworkAddress->aucAddress),
 				IPV4TOSTR(prNetworkAddress->
-				aucAddress+sizeof(uint32_t)),
-				prCmdNetworkAddressList->ucBssIndex,
-				prCmdNetworkAddressList->ucVersion);
+				aucAddress+sizeof(uint32_t)));
 
 				u4IPv4AddrIdx++;
 			}
@@ -9653,6 +9650,12 @@ wlanoidSetNetworkAddress(IN struct ADAPTER *prAdapter,
 	} else {
 		prCmdNetworkAddressList->ucAddressCount = 0;
 	}
+
+	DBGLOG(OID, INFO,
+	       "%s: Set %u IPv4 address for BSS[%d] ver[%d]\n", __func__,
+		u4IPv4AddrCount,
+		prCmdNetworkAddressList->ucBssIndex,
+		prCmdNetworkAddressList->ucVersion);
 
 	/* 4 <5> Send command */
 	rStatus = wlanSendSetQueryCmd(prAdapter,
@@ -9773,12 +9776,11 @@ wlanoidSetIPv6NetworkAddress(IN struct ADAPTER *prAdapter,
 				->arNetAddress[u4IPv6AddrCount].aucIpAddr,
 				prNetworkAddress->aucAddress,
 				sizeof(struct CMD_IPV6_NETWORK_ADDRESS));
+
 				DBGLOG(INIT, INFO,
-					"%s: IPv6 Addr [%u][" IPV6STR
-					"]BSS[%d]\n",
-					__func__, u4IPv6AddrCount,
-					IPV6TOSTR(prNetworkAddress->aucAddress),
-				       prCmdIPv6NetworkAddressList->ucBssIndex);
+				       "%s: IPv6 Addr [%u][" IPV6STR "]\n",
+				       __func__, u4IPv6AddrCount,
+				       IPV6TOSTR(prNetworkAddress->aucAddress));
 
 				u4IPv6AddrCount++;
 			}
@@ -9794,6 +9796,11 @@ wlanoidSetIPv6NetworkAddress(IN struct ADAPTER *prAdapter,
 	} else {
 		prCmdIPv6NetworkAddressList->ucAddressCount = 0;
 	}
+
+	DBGLOG(INIT, INFO,
+	       "Set %u IPv6 address for BSS[%u]\n",
+	       u4IPv6AddrCount,
+	       prCmdIPv6NetworkAddressList->ucBssIndex);
 
 	/* 4 <5> Send command */
 	rStatus = wlanSendSetQueryCmd(prAdapter,
@@ -12185,7 +12192,6 @@ wlanoidSetCountryCode(IN struct ADAPTER *prAdapter,
 
 	/* Force to re-search country code in regulatory domains */
 	prAdapter->prDomainInfo = NULL;
-	prAdapter->u2DomainInfoCheckForCurCountry = FALSE;
 	rlmDomainSendCmd(prAdapter);
 
 	/* Update supported channel list in channel table based on current
@@ -12952,8 +12958,6 @@ wlanoidSetNANMode(IN struct ADAPTER *prAdapter, IN void *pvSetBuffer,
 		} else {
 			status = WLAN_STATUS_FAILURE;
 		}
-		prAdapter->ucNanPubNum = 0;
-		prAdapter->ucNanSubNum = 0;
 	} else {
 		if (prAdapter->fgIsNANRegistered)
 			nanRemove(prAdapter->prGlueInfo);
@@ -13613,6 +13617,60 @@ wlanoidSetHS20Info(IN struct ADAPTER *prAdapter,
 }
 #endif /* CFG_SUPPORT_PASSPOINT */
 
+#if CFG_SUPPORT_SNIFFER
+uint32_t
+wlanoidSetMonitor(IN struct ADAPTER *prAdapter,
+		  IN void *pvSetBuffer, IN uint32_t u4SetBufferLen,
+		  OUT uint32_t *pu4SetInfoLen) {
+	struct PARAM_CUSTOM_MONITOR_SET_STRUCT *prMonitorSetInfo;
+	struct CMD_MONITOR_SET_INFO rCmdMonitorSetInfo;
+	uint32_t rWlanStatus = WLAN_STATUS_SUCCESS;
+
+	DEBUGFUNC("wlanoidSetMonitor");
+
+	ASSERT(prAdapter);
+	ASSERT(pu4SetInfoLen);
+
+	*pu4SetInfoLen = sizeof(struct
+				PARAM_CUSTOM_MONITOR_SET_STRUCT);
+
+	if (u4SetBufferLen < sizeof(struct
+				    PARAM_CUSTOM_MONITOR_SET_STRUCT))
+		return WLAN_STATUS_INVALID_LENGTH;
+
+	ASSERT(pvSetBuffer);
+
+	prMonitorSetInfo = (struct PARAM_CUSTOM_MONITOR_SET_STRUCT
+			    *) pvSetBuffer;
+
+	rCmdMonitorSetInfo.ucEnable = prMonitorSetInfo->ucEnable;
+	rCmdMonitorSetInfo.ucBand = prMonitorSetInfo->ucBand;
+	rCmdMonitorSetInfo.ucPriChannel =
+		prMonitorSetInfo->ucPriChannel;
+	rCmdMonitorSetInfo.ucSco = prMonitorSetInfo->ucSco;
+	rCmdMonitorSetInfo.ucChannelWidth =
+		prMonitorSetInfo->ucChannelWidth;
+	rCmdMonitorSetInfo.ucChannelS1 =
+		prMonitorSetInfo->ucChannelS1;
+	rCmdMonitorSetInfo.ucChannelS2 =
+		prMonitorSetInfo->ucChannelS2;
+
+	rWlanStatus = wlanSendSetQueryCmd(prAdapter,
+					  CMD_ID_SET_MONITOR,
+					  TRUE,
+					  FALSE,
+					  TRUE,
+					  nicCmdEventSetCommon,
+					  nicOidCmdTimeoutCommon,
+					  sizeof(struct CMD_MONITOR_SET_INFO),
+					  (uint8_t *) &rCmdMonitorSetInfo,
+					  pvSetBuffer,
+					  u4SetBufferLen);
+
+	return rWlanStatus;
+}
+#endif
+
 #if CFG_SUPPORT_MSP
 uint32_t
 wlanoidQueryWlanInfo(IN struct ADAPTER *prAdapter,
@@ -13798,7 +13856,69 @@ wlanoidSetFwLog2Host(
 				   (uint8_t *)prFwLog2HostCtrl,
 				   pvSetBuffer, u4SetBufferLen);
 }
+#if CFG_SUPPORT_RSSI_DISCONNECT
+/*----------------------------------------------------------------------------*/
+/*!
+ * \brief This routine is called to query the latest RSSI
+ * \value before disconnecting.
+ *
+ * \param[in] prAdapter Pointer to the Adapter structure.
+ * \param[in] pvQueryBuffer Pointer to the buffer that holds
+ * \the result of the query.
+ * \param[in] u4QueryBufferLen The length of the query buffer.
+ * \param[out] pu4QueryInfoLen If the call is successful,
+ * \returns the number of
+ *   bytes written into the query buffer. If the call
+ * \failed due to invalid length of
+ *   the query buffer, returns the amount of storage needed.
+ *
+ * \retval WLAN_STATUS_SUCCESS
+ * \retval WLAN_STATUS_BUFFER_TOO_SHORT
+ * \retval WLAN_STATUS_NOT_SUPPORTED
+ */
+/*----------------------------------------------------------------------------*/
+uint32_t
+wlanoidQueryRssiDisconnect(
+	IN struct ADAPTER *prAdapter,
+	IN void *pvSetBuffer,
+	IN uint32_t u4SetBufferLen,
+	OUT uint32_t *pu4SetInfoLen) {
 
+	int32_t i4cRssi;
+	uint8_t ucBssIndex = 0;
+
+	DEBUGFUNC("wlanoidQueryRssiDisconnect");
+
+	if (!prAdapter || !u4SetBufferLen)
+		return -EPERM;
+	if (u4SetBufferLen && !pvSetBuffer)
+		return -EPERM;
+
+	*pu4SetInfoLen = sizeof(int32_t);
+
+	ucBssIndex = GET_IOCTL_BSSIDX(prAdapter);
+
+	/* Check for query buffer length */
+	if (u4SetBufferLen < *pu4SetInfoLen) {
+		DBGLOG(OID, WARN, "Too short length %u\n", u4SetBufferLen);
+		return WLAN_STATUS_BUFFER_TOO_SHORT;
+	}
+	if (kalGetMediaStateIndicated(prAdapter->prGlueInfo,
+					ucBssIndex) == MEDIA_STATE_CONNECTED)
+		return WLAN_STATUS_NOT_SUPPORTED;
+
+	i4cRssi = (int32_t) prAdapter->rLinkQuality.rLq[ucBssIndex].cRssi;
+
+	if (i4cRssi > PARAM_WHQL_RSSI_MAX_DBM)
+		i4cRssi = PARAM_WHQL_RSSI_MAX_DBM;
+	else if (i4cRssi < PARAM_WHQL_RSSI_MIN_DBM)
+		i4cRssi = PARAM_WHQL_RSSI_MIN_DBM;
+	DBGLOG(OID, INFO, "i4cRssi = %d\n", i4cRssi);
+	kalMemCopy(pvSetBuffer, &i4cRssi, sizeof(int32_t));
+	return WLAN_STATUS_SUCCESS;
+
+}
+#endif
 uint32_t
 wlanoidNotifyFwSuspend(
 	IN struct ADAPTER *prAdapter,
@@ -15950,63 +16070,6 @@ uint32_t wlanoidUpdateFtIes(struct ADAPTER *prAdapter, void *pvSetBuffer,
 	return WLAN_STATUS_SUCCESS;
 }
 
-#ifdef CFG_SUPPORT_SNIFFER_RADIOTAP
-uint32_t wlanoidSetMonitor(IN struct ADAPTER *prAdapter,
-		  IN void *pvSetBuffer, IN uint32_t u4SetBufferLen,
-		  OUT uint32_t *pu4SetInfoLen)
-{
-	struct GLUE_INFO *prGlueInfo;
-	struct CMD_MONITOR_SET_INFO *prCmdMonitor;
-
-	prCmdMonitor = kalMemAlloc(
-		sizeof(struct CMD_MONITOR_SET_INFO), VIR_MEM_TYPE);
-	if (!prCmdMonitor) {
-		log_dbg(OID, ERROR, "alloc CmdMonitor fail\n");
-		return WLAN_STATUS_FAILURE;
-	}
-
-	ASSERT(prAdapter);
-
-	prGlueInfo = prAdapter->prGlueInfo;
-
-	DBGLOG(REQ, INFO,
-		"en[%d],bn[%d],pc[%d],sco[%d],bw[%d],cc1[%d],cc2[%d],bidx[%d],aid[%d],fcs[%d]\n",
-		prGlueInfo->fgIsEnableMon,
-		prGlueInfo->ucBand,
-		prGlueInfo->ucPriChannel,
-		prGlueInfo->ucSco,
-		prGlueInfo->ucChannelWidth,
-		prGlueInfo->ucChannelS1,
-		prGlueInfo->ucChannelS2,
-		prGlueInfo->ucBandIdx,
-		prGlueInfo->u2Aid,
-		prGlueInfo->fgDropFcsErrorFrame);
-
-	prCmdMonitor->ucEnable = prGlueInfo->fgIsEnableMon;
-	prCmdMonitor->ucBand = prGlueInfo->ucBand;
-	prCmdMonitor->ucPriChannel = prGlueInfo->ucPriChannel;
-	prCmdMonitor->ucSco = prGlueInfo->ucSco;
-	prCmdMonitor->ucChannelWidth = prGlueInfo->ucChannelWidth;
-	prCmdMonitor->ucChannelS1 = prGlueInfo->ucChannelS1;
-	prCmdMonitor->ucChannelS2 = prGlueInfo->ucChannelS2;
-	prCmdMonitor->ucBandIdx = prGlueInfo->ucBandIdx;
-	prCmdMonitor->u2Aid = prGlueInfo->u2Aid;
-	prCmdMonitor->fgDropFcsErrorFrame = prGlueInfo->fgDropFcsErrorFrame;
-
-	return wlanSendSetQueryCmd(prAdapter,
-		CMD_ID_SET_MONITOR,
-		TRUE,
-		FALSE,
-		TRUE,
-		nicCmdEventSetCommon,
-		nicOidCmdTimeoutCommon,
-		sizeof(struct CMD_MONITOR_SET_INFO),
-		(uint8_t *)prCmdMonitor, pvSetBuffer, u4SetBufferLen);
-
-	kalMemFree(prCmdMonitor, VIR_MEM_TYPE, sizeof(struct CMD_MONITOR_SET_INFO));
-}
-#endif
-
 uint32_t wlanoidSendNeighborRequest(struct ADAPTER *prAdapter,
 				    void *pvSetBuffer, uint32_t u4SetBufferLen,
 				    uint32_t *pu4SetInfoLen)
@@ -16923,7 +16986,6 @@ uint32_t wlanoidTxPowerControl(IN struct ADAPTER *prAdapter,
 					MAX_TX_PWR_CTRL_ELEMENT_NAME_SIZE);
 				newElement->index = oldElement->index;
 				newElement->eCtrlType = oldElement->eCtrlType;
-				newElement->u2CountryCode =oldElement->u2CountryCode;
 				txPwrCtrlDeleteElement(prAdapter,
 				       newElement->name, newElement->index,
 				       PWR_CTRL_TYPE_DYNAMIC_LIST);
@@ -17016,12 +17078,9 @@ wlanoidIndicateBssInfo(IN struct ADAPTER *prAdapter,
 				   pprBssDesc[i]->eBand,
 				   RCPI_TO_dBm(pprBssDesc[i]->ucRCPI));
 	}
-
-	if (i > 0) {
-		DBGLOG(SCN, INFO, "pending %d sched scan results\n", i);
+	DBGLOG(SCN, INFO, "pending %d sched scan results\n", i);
+	if (i > 0)
 		kalMemZero(&pprBssDesc[0], i * sizeof(struct BSS_DESC *));
-	} else
-		DBGLOG(SCN, TRACE, "pending %d sched scan results\n", i);
 
 	return rStatus;
 }	/* wlanoidIndicateBssInfo */

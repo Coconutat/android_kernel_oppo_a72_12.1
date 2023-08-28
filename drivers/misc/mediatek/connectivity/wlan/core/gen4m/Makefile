@@ -1,8 +1,7 @@
-ccflags-y :=
 ifeq ($(CONFIG_MTK_PLATFORM),)
-CONFIG_MTK_PLATFORM := mt$(WLAN_CHIP_ID)
+	CONFIG_MTK_PLATFORM := mt$(WLAN_CHIP_ID)
 endif
-MTK_PLATFORM := $(subst $(quote),,$(CONFIG_MTK_PLATFORM))
+MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
 
 # ---------------------------------------------------
 # OS option
@@ -24,17 +23,9 @@ ccflags-y += -DCFG_VIRTUAL_OS
 ccflags-y += -DCFG_REMIND_IMPLEMENT
 endif
 
-ifndef TOP
-    TOP := $(srctree)/..
-endif
-$(info os option: $(os))
 # ---------------------------------------------------
 # ALPS Setting
 # ---------------------------------------------------
-ifneq ($(KERNEL_OUT),)
-    ccflags-y += -imacros $(KERNEL_OUT)/include/generated/autoconf.h
-endif
-
 ifeq ($(KBUILD_MODPOST_FAIL_ON_WARNINGS),)
     # Force build fail on modpost warning
     KBUILD_MODPOST_FAIL_ON_WARNINGS=y
@@ -51,10 +42,6 @@ ccflags-y += $(WLAN_CHIP_LIST)
 ifeq ($(MTK_COMBO_CHIP),)
 MTK_COMBO_CHIP = MT6632
 endif
-
-$(info $$MTK_PLATFORM is [${MTK_PLATFORM}])
-$(info $$WLAN_CHIP_ID is [${WLAN_CHIP_ID}])
-$(info $$MTK_COMBO_CHIP is [${MTK_COMBO_CHIP}])
 
 ifneq ($(CONFIG_MTK_EMI),)
 ccflags-y += -DCONFIG_WLAN_MTK_EMI=1
@@ -73,16 +60,12 @@ ccflags-y += -DWLAN_INCLUDE_PROC
 ccflags-y += -DCFG_SUPPORT_AGPS_ASSIST=0
 ccflags-y += -DCFG_SUPPORT_TSF_USING_BOOTTIME=1
 ccflags-y += -DARP_MONITER_ENABLE=1
-ccflags-y += -Werror $(call cc-disable-warning, unused-but-set-variable)
+ccflags-y += -Werror
 #ccflags-y:=$(filter-out -U$(WLAN_CHIP_ID),$(ccflags-y))
 #ccflags-y += -DLINUX -D$(WLAN_CHIP_ID)
 #workaround: also needed for none LINUX system
 # because some of common part code is surrounded with this flag
 ccflags-y += -DLINUX
-
-#ifdef OPLUS_BUG_STABILITY
-ccflags-y += -DOPLUS_WLAN_BUG_STABILITY=1
-#endif  /* OPLUS_BUG_STABILITY */
 
 ifneq ($(filter MT6632,$(MTK_COMBO_CHIP)),)
 ccflags-y:=$(filter-out -UMT6632,$(ccflags-y))
@@ -169,12 +152,6 @@ else
     ccflags-y += -DCFG_SUPPORT_SET_IPV6_NETWORK=0
 endif
 
-ifneq ($(filter 6855, $(WLAN_CHIP_ID)),)
-    ccflags-y += -DCFG_SUPPORT_MDDP_AOR=1
-else
-    ccflags-y += -DCFG_SUPPORT_MDDP_AOR=0
-endif
-
 ifneq ($(findstring 5_0,$(MTK_COMBO_CHIP)),)
 ccflags-y:=$(filter-out -USOC5_0,$(ccflags-y))
 ccflags-y += -DSOC5_0
@@ -196,9 +173,7 @@ ccflags-y:=$(filter-out -USOC7_0,$(ccflags-y))
 ccflags-y += -DSOC7_0
 CONFIG_MTK_WIFI_CONNAC2X=y
 CONFIG_MTK_WIFI_11AX_SUPPORT=y
-#ifdef OPLUS_BUG_STABILITY
-#CONFIG_MTK_WIFI_6G_SUPPORT=y
-#endif  /* OPLUS_BUG_STABILITY */
+CONFIG_MTK_WIFI_6G_SUPPORT=y
 CONFIG_MTK_WIFI_TWT_SUPPORT=y
 CONFIG_MTK_WIFI_TWT_STA_DIRECT_TEARDOWN=y
 CONFIG_NUM_OF_WFDMA_RX_RING=2
@@ -209,9 +184,11 @@ CONFIG_MTK_WIFI_DOWNLOAD_DYN_MEMORY_MAP=y
 CONFIG_MTK_WIFI_POWER_THROTTLING=y
 CONFIG_MTK_WIFI_PKT_OFLD_SUPPORT=y
 CONFIG_MTK_WIFI_APF_SUPPORT=y
-CONFIG_MTK_WIFI_NAN=y
+ccflags-y += -DCFG_SUPPORT_BW160
 
-CONFIG_MTK_WIFI_SNIFFER_RADIOTAP=y
+ifneq ($(TARGET_BUILD_VARIANT),user)
+CONFIG_MTK_WIFI_NAN=y
+endif
 
 ccflags-y += -DCFG_POWER_ON_DOWNLOAD_EMI_ROM_PATCH=1
 ccflags-y += -DCFG_ROM_PATCH_NO_SEM_CTRL=1
@@ -283,11 +260,6 @@ endif
 
 ifeq ($(WIFI_ENABLE_GCOV), y)
     GCOV_PROFILE := y
-endif
-
-ifeq ($(CONFIG_MTK_WIFI_SNIFFER_RADIOTAP), y)
-    ccflags-y += -DCFG_SUPPORT_SNIFFER_RADIOTAP
-    ccflags-y += -DCFG_SUPPORT_PDMA_SCATTER
 endif
 
 ccflags-y += -DCFG_DRIVER_INITIAL_RUNNING_MODE=3
@@ -367,7 +339,7 @@ else
     ccflags-y += -DCFG_WIFI_IP_SET=1
 endif
 
-ifeq ($(CONFIG_WLAN_DRV_BUILD_IN),y)
+ifneq ($(filter MTK_WCN_REMOVE_KERNEL_MODULE,$(KBUILD_SUBDIR_CCFLAGS)),)
     ccflags-y += -DCFG_BUILT_IN_DRIVER=1
 else
     ccflags-y += -DCFG_BUILT_IN_DRIVER=0
@@ -391,7 +363,12 @@ else
     ccflags-y += -DCFG_SUPPORT_AEE=0
 endif
 
-ccflags-y += -DBUILD_QA_DBG=0
+# Disable ASSERT() for user load, enable for others
+ifneq ($(TARGET_BUILD_VARIANT),user)
+    ccflags-y += -DBUILD_QA_DBG=1
+else
+    ccflags-y += -DBUILD_QA_DBG=0
+endif
 
 ifeq ($(CONFIG_MTK_COMBO_WIFI),y)
     ccflags-y += -DCFG_WPS_DISCONNECT=1
@@ -422,13 +399,11 @@ endif
 
 ifneq ($(CFG_CFG80211_VERSION),)
 VERSION_STR = $(subst \",,$(subst ., , $(subst -, ,$(subst v,,$(CFG_CFG80211_VERSION)))))
-$(info VERSION_STR=$(VERSION_STR))
 X = $(firstword $(VERSION_STR))
 Y = $(word 2 ,$(VERSION_STR))
 Z = $(word 3 ,$(VERSION_STR))
 VERSION := $(shell echo "$$(( $X * 65536 + $Y * 256 + $Z))" )
 ccflags-y += -DCFG_CFG80211_VERSION=$(VERSION)
-$(info DCFG_CFG80211_VERSION=$(VERSION))
 endif
 
 ccflags-y += -DCFG_SUPPORT_PASSPOINT=1
@@ -485,7 +460,7 @@ ccflags-y += -DCFG_SUPPORT_NAN=0
 endif
 
 ifeq ($(MODULE_NAME),)
-MODULE_NAME := wlan_$(shell echo $(strip $(WLAN_CHIP_ID)) | tr A-Z a-z)_$(CONFIG_MTK_COMBO_WIFI_HIF)
+	MODULE_NAME := wlan_$(shell echo $(strip $(WLAN_CHIP_ID)) | tr A-Z a-z)_$(CONFIG_MTK_COMBO_WIFI_HIF)
 endif
 
 ccflags-y += -DDBG=0
@@ -546,15 +521,8 @@ obj-$(CONFIG_MTK_COMBO_WIFI) += $(MODULE_NAME).o
 #obj-y += $(MODULE_NAME).o
 endif
 
-ifeq ($(CONFIG_WLAN_DRV_BUILD_IN),y)
-$(warning $(MODULE_NAME) build-in boot.img)
 obj-y += $(MODULE_NAME).o
 ccflags-y += -DCONFIG_WLAN_DRV_BUILD_IN=1
-else
-$(warning $(MODULE_NAME) is kernel module)
-obj-m += $(MODULE_NAME).o
-ccflags-y += -DCONFIG_WLAN_DRV_BUILD_IN=0
-endif
 
 ifeq ($(CONFIG_MTK_WIFI_PKT_OFLD_SUPPORT), y)
 ccflags-y += -DCFG_SUPPORT_PKT_OFLD=1
@@ -567,11 +535,6 @@ else
 ccflags-y += -DCFG_SUPPORT_PKT_OFLD=0
 endif
 
-#ifdef OPLUS_FEATURE_WIFI_SMARTGEAR
-ifeq ($(OPLUS_FEATURE_WIFI_SMARTGEAR), yes)
-ccflags-y += -DCFG_SUPPORT_SMART_GEAR=1
-endif
-#endif /* OPLUS_FEATURE_WIFI_SMARTGEAR */
 # ---------------------------------------------------
 # Directory List
 # ---------------------------------------------------
@@ -622,8 +585,7 @@ NIC_OBJS := 	$(NIC_DIR)nic.o \
 		$(NIC_DIR)cmd_buf.o \
 		$(NIC_DIR)que_mgt.o \
 		$(NIC_DIR)nic_cmd_event.o \
-		$(NIC_DIR)nic_umac.o \
-		$(NIC_DIR)radiotap.o
+		$(NIC_DIR)nic_umac.o
 
 ifeq ($(os), none)
 OS_OBJS := 	$(OS_DIR)gl_dependent.o \
@@ -690,7 +652,6 @@ MGMT_OBJS := 	$(MGMT_DIR)ais_fsm.o \
 # ---------------------------------------------------
 MGMT_OBJS += $(MGMT_DIR)stats.o
 
-MGMT_OBJS += $(MGMT_DIR)oplus_rlm_domain.o
 
 CHIPS_OBJS += $(CHIPS_CMM)cmm_asic_connac.o
 CHIPS_OBJS +=  $(CHIPS_CMM)dbg_connac.o
@@ -899,29 +860,12 @@ SYSDVT_OBJS += $(SYSDVT_DIR)dvt_dmashdl.o
 endif
 endif
 
-#ifdef OPLUS_FEATURE_WIFI_OPLUSWFD
-ifeq ($(CONFIG_OPLUS_FEATURE_WIFI_OPLUSWFD), m)
-ccflags-y += -DOPLUS_FEATURE_WIFI_OPLUSWFD=1
-else ifeq ($(CONFIG_OPLUS_FEATURE_WIFI_OPLUSWFD), y)
-ccflags-y += -DOPLUS_FEATURE_WIFI_OPLUSWFD=1
-else ifeq ($(CONFIG_OPLUS_FEATURE_WIFI_OPLUSWFD), n)
-ccflags-y += -UOPLUS_FEATURE_WIFI_OPLUSWFD
-endif
-
-OPLUS_WFD_OBJS += oplus_wfd/wlan_oplus_wfd.o
-#endif /* OPLUS_FEATURE_WIFI_OPLUSWFD */
-
 # ---------------------------------------------------
 # Service git List
 # ---------------------------------------------------
 SERVICE_DIR  := wlan_service/
 
-ifneq ($(findstring wlan_service,$(MTK_WLAN_SERVICE_PATH)),)
 MTK_WLAN_SERVICE=yes
-SERVICE_DIR  := $(MTK_WLAN_SERVICE_PATH)
-$(info SERVICE_DIR is [{$(MTK_WLAN_SERVICE_PATH)}])
-endif
-
 ifeq ($(MTK_WLAN_SERVICE), yes)
 ccflags-y += -DCONFIG_WLAN_SERVICE=1
 ccflags-y += -DCONFIG_TEST_ENGINE_OFFLOAD=1
@@ -929,7 +873,6 @@ ccflags-y += -I$(src)/$(SERVICE_DIR)include
 ccflags-y += -I$(src)/$(SERVICE_DIR)service/include
 ccflags-y += -I$(src)/$(SERVICE_DIR)glue/osal/include
 ccflags-y += -I$(src)/$(SERVICE_DIR)glue/hal/include
-$(info $$CCFLAG is [{$(ccflags-y)}])
 SERVICE_OBJS := $(SERVICE_DIR)agent/agent.o \
                 $(SERVICE_DIR)service/service_test.o \
                 $(SERVICE_DIR)service/test_engine.o \
@@ -937,7 +880,6 @@ SERVICE_OBJS := $(SERVICE_DIR)agent/agent.o \
                 $(SERVICE_DIR)glue/osal/gen4m/net_adaption_gen4m.o \
                 $(SERVICE_DIR)glue/hal/gen4m/operation_gen4m.o
 $(MODULE_NAME)-objs  += $(SERVICE_OBJS)
-$(info $$MTK_WLAN_SERVICE is [{$(SERVICE_OBJS)}])
 else
 ccflags-y += -DCONFIG_WLAN_SERVICE=0
 ccflags-y += -DCONFIG_TEST_ENGINE_OFFLOAD=0
@@ -952,10 +894,6 @@ $(MODULE_NAME)-objs  += $(CHIPS_OBJS)
 $(MODULE_NAME)-objs  += $(SYSDVT_OBJS)
 $(MODULE_NAME)-objs  += $(NAN_OBJS)
 $(MODULE_NAME)-objs  += $(NAN_SEC_OBJS)
-
-#ifdef OPLUS_FEATURE_WIFI_OPLUSWFD
-$(MODULE_NAME)-objs  += $(OPLUS_WFD_OBJS)
-#endif /* OPLUS_FEATURE_WIFI_OPLUSWFD */
 
 ifneq ($(findstring UT_TEST_MODE,$(MTK_COMBO_CHIP)),)
 include $(src)/test/ut.make

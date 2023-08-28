@@ -312,7 +312,8 @@ void cmdBufFreeCmdInfo(IN struct ADAPTER *prAdapter,
 	if (prCmdInfo) {
 		if (prCmdInfo->pucInfoBuffer) {
 			/* Only for debug, will remove later... */
-			if (prCmdInfo->ucCID == 0x49)
+			if (prCmdInfo->ucCID == 0x48 ||
+				prCmdInfo->ucCID == 0x49)
 				DBGLOG(MEM, INFO, "CMD[0x%x] freed!\n",
 					prCmdInfo->ucCID);
 			cnmMemFree(prAdapter, prCmdInfo->pucInfoBuffer);

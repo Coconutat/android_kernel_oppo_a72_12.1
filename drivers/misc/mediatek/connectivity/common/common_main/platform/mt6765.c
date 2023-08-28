@@ -165,9 +165,6 @@ static struct regulator *reg_VCN33_BT;
 static struct regulator *reg_VCN33_WIFI;
 #endif
 
-extern int g_mapped_reg_table_sz_mt6765;
-extern REG_MAP_ADDR g_mapped_reg_table_mt6765[];
-
 static EMI_CTRL_STATE_OFFSET mtk_wcn_emi_state_off = {
 	.emi_apmem_ctrl_state = EXP_APMEM_CTRL_STATE,
 	.emi_apmem_ctrl_host_sync_state = EXP_APMEM_CTRL_HOST_SYNC_STATE,
@@ -253,9 +250,6 @@ WMT_CONSYS_IC_OPS consys_ic_ops_mt6765 = {
 
 	.consys_ic_jtag_set_for_mcu = consys_jtag_set_for_mcu,
 	.consys_ic_jtag_flag_ctrl = consys_jtag_flag_ctrl,
-
-	.consys_ic_get_debug_reg_ary_size = &g_mapped_reg_table_sz_mt6765,
-	.consys_ic_get_debug_reg_ary = g_mapped_reg_table_mt6765,
 };
 
 static const struct connlog_emi_config connsys_fw_log_parameter = {
@@ -490,7 +484,6 @@ static INT32 consys_clock_buffer_ctrl(MTK_WCN_BOOL enable)
 static VOID consys_set_if_pinmux(MTK_WCN_BOOL enable)
 {
 	UINT8 *consys_if_pinmux_reg_base = NULL;
-	UINT8 *consys_if_pinmux_driving_base = NULL;
 
 	/* Switch D die pinmux for connecting A die */
 	consys_if_pinmux_reg_base = ioremap_nocache(CONSYS_IF_PINMUX_REG_BASE, 0x1000);
@@ -506,23 +499,6 @@ static VOID consys_set_if_pinmux(MTK_WCN_BOOL enable)
 		CONSYS_REG_WRITE(consys_if_pinmux_reg_base + CONSYS_IF_PINMUX_02_OFFSET,
 				(CONSYS_REG_READ(consys_if_pinmux_reg_base + CONSYS_IF_PINMUX_02_OFFSET) &
 				CONSYS_IF_PINMUX_02_MASK) | CONSYS_IF_PINMUX_02_VALUE);
-
-		consys_if_pinmux_driving_base = ioremap_nocache(CONSYS_IF_PINMUX_DRIVING_BASE, 0x100);
-		if (!consys_if_pinmux_driving_base) {
-			WMT_PLAT_PR_INFO("consys_if_pinmux_driving_base(%x) ioremap fail\n",
-					CONSYS_IF_PINMUX_DRIVING_BASE);
-			iounmap(consys_if_pinmux_reg_base);
-			return;
-		}
-		CONSYS_REG_WRITE(consys_if_pinmux_driving_base + CONSYS_IF_PINMUX_DRIVING_OFFSET_1,
-				(CONSYS_REG_READ(consys_if_pinmux_driving_base +
-				CONSYS_IF_PINMUX_DRIVING_OFFSET_1) &
-				CONSYS_IF_PINMUX_DRIVING_MASK_1) | CONSYS_IF_PINMUX_DRIVING_VALUE_1);
-		CONSYS_REG_WRITE(consys_if_pinmux_driving_base + CONSYS_IF_PINMUX_DRIVING_OFFSET_2,
-				(CONSYS_REG_READ(consys_if_pinmux_driving_base +
-				CONSYS_IF_PINMUX_DRIVING_OFFSET_2) &
-				CONSYS_IF_PINMUX_DRIVING_MASK_2) | CONSYS_IF_PINMUX_DRIVING_VALUE_2);
-		iounmap(consys_if_pinmux_driving_base);
 	} else {
 		CONSYS_REG_WRITE(consys_if_pinmux_reg_base + CONSYS_IF_PINMUX_01_OFFSET,
 				CONSYS_REG_READ(consys_if_pinmux_reg_base + CONSYS_IF_PINMUX_01_OFFSET) &

@@ -1133,7 +1133,6 @@ struct WIFI_VAR {
 	uint8_t ucAdvPws; /* enable LP multiple DTIM function, default enable */
 	uint8_t ucWowOnMdtim; /* multiple DTIM if WOW enable, default 1 */
 	uint8_t ucWowOffMdtim; /* multiple DTIM if WOW disable, default 3 */
-	uint32_t u4TxHangFullDumpMode;
 
 	uint8_t u4SwTestMode;
 	uint8_t	ucCtrlFlagAssertPath;
@@ -1155,20 +1154,19 @@ struct WIFI_VAR {
 	uint32_t fgEnArpFilter;
 
 	uint8_t	uDeQuePercentEnable;
-	uint32_t u4DeQuePercentVHT80Nss1;
-	uint32_t u4DeQuePercentVHT40Nss1;
-	uint32_t u4DeQuePercentVHT20Nss1;
-	uint32_t u4DeQuePercentHT40Nss1;
-	uint32_t u4DeQuePercentHT20Nss1;
+	uint32_t	u4DeQuePercentVHT80Nss1;
+	uint32_t	u4DeQuePercentVHT40Nss1;
+	uint32_t	u4DeQuePercentVHT20Nss1;
+	uint32_t	u4DeQuePercentHT40Nss1;
+	uint32_t	u4DeQuePercentHT20Nss1;
 
 	uint32_t u4PerfMonUpdatePeriod;
 	uint32_t u4PerfMonTpTh[PERF_MON_TP_MAX_THRESHOLD];
-	uint32_t u4BoostCpuTh;
+	uint32_t	u4BoostCpuTh;
 #if CFG_SUPPORT_LITTLE_CPU_BOOST
-	uint32_t u4BoostLittleCpuTh;
+	uint32_t	u4BoostLittleCpuTh;
 #endif /* CFG_SUPPORT_LITTLE_CPU_BOOST */
-	uint32_t au4CpuBoostMinFreq;
-	uint8_t fgIsBoostCpuThAdjustable;
+	u_int8_t	fgIsBoostCpuThAdjustable;
 
 	uint32_t u4PerfMonPendingTh;
 	uint32_t u4PerfMonUsedTh;
@@ -1729,8 +1727,6 @@ struct ADAPTER {
 	unsigned char fgIsNANfromHAL;
 	bool fgIsNanSendRequestToCnm;
 	uint8_t ucNanReqTokenId;
-	uint8_t ucNanPubNum;
-	uint8_t ucNanSubNum;
 
 	/* Container for Data Engine */
 	struct _NAN_DATA_PATH_INFO_T rDataPathInfo;
@@ -1811,8 +1807,6 @@ struct ADAPTER {
 	enum ENUM_SYS_PCO_PHASE eSysPcoPhase;
 
 	struct DOMAIN_INFO_ENTRY *prDomainInfo;
-	u_int8_t u2DomainInfoCheckForCurCountry;
-	u_int8_t u2MaxBWforCurCountry;
 
 	/* QM */
 	struct QUE_MGT rQM;
@@ -1975,10 +1969,6 @@ struct ADAPTER {
 
 	uint32_t u4HifDbgFlag;
 	uint32_t u4HifChkFlag;
-	uint32_t u4HifDbgParam;
-	uint32_t u4HifTxHangDumpBitmap;
-	uint32_t u4HifTxHangDumpIdx;
-	uint32_t u4HifTxHangDumpNum;
 	uint32_t u4NoMoreRfb;
 
 	/* Only for PCIE DmaSchdl usage so far. */
@@ -2070,10 +2060,6 @@ struct ADAPTER {
 	u_int8_t fgEnTmacICS;
 	u_int8_t fgEnRmacICS;
 #endif /* CFG_SUPPORT_ICS */
-
-#if CFG_SUPPORT_RX_GRO
-	struct timer_list rRxGROTimer;
-#endif /* CFG_SUPPORT_RX_GRO */
 
 #if (CFG_SUPPORT_POWER_THROTTLING == 1)
 	struct LINK rPwrLevelHandlerList;

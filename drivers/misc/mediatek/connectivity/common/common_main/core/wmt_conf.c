@@ -695,16 +695,3 @@ INT32 wmt_conf_deinit(VOID)
 	return 0;
 }
 
-void wmt_set_bt_tssi_target(int value)
-{
-	P_WMT_GEN_CONF pWmtGenConf = wmt_conf_get_cfg();
-
-	if (pWmtGenConf == NULL) {
-		WMT_INFO_FUNC("pWmtGenConf == NULL!!\n");
-		return;
-	}
-
-	pWmtGenConf->bt_tssi_target = value;
-	WMT_INFO_FUNC("bt_tssi_target = %d\n", value);
-}
-EXPORT_SYMBOL(wmt_set_bt_tssi_target);

@@ -221,6 +221,9 @@ static int wlan_fb_notifier_callback(struct notifier_block
 				*self, unsigned long event, void *data);
 
 void *wlan_fb_notifier_priv_data;
+static struct notifier_block wlan_fb_notifier = {
+	.notifier_call = wlan_fb_notifier_callback
+};
 
 static struct miscdevice wlan_object;
 
@@ -254,7 +257,7 @@ static void kalDumpMsduReportStats(IN struct ADAPTER *prAdapter);
 #define  KGIDT_VALUE(v) v
 #endif
 
-const struct firmware *fw_entry;
+const struct firmware *wifi_fw_entry;
 
 /* Default */
 static uint8_t *apucFwName[] = {
@@ -328,7 +331,7 @@ uint32_t kalFirmwareOpen(IN struct GLUE_INFO *prGlueInfo,
 		 *               "/firmware/image"
 		 * Linux path: "/lib/firmware", "/lib/firmware/update"
 		 */
-		ret = _kalRequestFirmware(&fw_entry, apucNameTable[ucNameIdx],
+		ret = _kalRequestFirmware(&wifi_fw_entry, apucNameTable[ucNameIdx],
 				       prGlueInfo->prDev);
 
 		if (ret) {
@@ -374,7 +377,7 @@ error_open:
 /*----------------------------------------------------------------------------*/
 uint32_t kalFirmwareClose(IN struct GLUE_INFO *prGlueInfo)
 {
-	release_firmware(fw_entry);
+	release_firmware(wifi_fw_entry);
 
 	return WLAN_STATUS_SUCCESS;
 }
@@ -399,12 +402,12 @@ uint32_t kalFirmwareLoad(IN struct GLUE_INFO *prGlueInfo,
 	ASSERT(pu4Size);
 	ASSERT(prBuf);
 
-	if ((fw_entry == NULL) || (fw_entry->size == 0)
-	    || (fw_entry->data == NULL)) {
+	if ((wifi_fw_entry == NULL) || (wifi_fw_entry->size == 0)
+	    || (wifi_fw_entry->data == NULL)) {
 		goto error_read;
 	} else {
-		memcpy(prBuf, fw_entry->data, fw_entry->size);
-		*pu4Size = fw_entry->size;
+		memcpy(prBuf, wifi_fw_entry->data, wifi_fw_entry->size);
+		*pu4Size = wifi_fw_entry->size;
 	}
 
 	return WLAN_STATUS_SUCCESS;
@@ -432,7 +435,7 @@ uint32_t kalFirmwareSize(IN struct GLUE_INFO *prGlueInfo,
 	ASSERT(prGlueInfo);
 	ASSERT(pu4Size);
 
-	*pu4Size = fw_entry->size;
+	*pu4Size = wifi_fw_entry->size;
 
 	return WLAN_STATUS_SUCCESS;
 }
@@ -934,12 +937,9 @@ void *kalPacketAlloc(IN struct GLUE_INFO *prGlueInfo,
 	uint32_t u4TxHeadRoomSize;
 
 	prChipInfo = prGlueInfo->prAdapter->chip_info;
-#ifdef CFG_SUPPORT_SNIFFER_RADIOTAP
-	u4TxHeadRoomSize = CFG_RADIOTAP_HEADROOM;
-#else
 	u4TxHeadRoomSize = NIC_TX_DESC_AND_PADDING_LENGTH +
 			   prChipInfo->txd_append_size;
-#endif
+
 	if (in_interrupt())
 		prSkb = __dev_alloc_skb(u4Size + u4TxHeadRoomSize,
 					GFP_ATOMIC | __GFP_NOWARN);
@@ -1098,55 +1098,6 @@ uint32_t kalRxIndicatePkts(IN struct GLUE_INFO *prGlueInfo,
 }
 
 #if CFG_SUPPORT_RX_GRO
-#if KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE
-void kalGROTimerFunc(struct timer_list *timer)
-#else
-void kalGROTimerFunc(unsigned long data)
-#endif
-{
-#if KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE
-	struct ADAPTER *prAdapter =
-		from_timer(prAdapter, timer, rRxGROTimer);
-	struct GLUE_INFO *prGlueInfo = prAdapter->prGlueInfo;
-#else
-	struct GLUE_INFO *prGlueInfo = (struct GLUE_INFO *)data;
-#endif
-	kalSetGROEvent2Rx(prGlueInfo);
-}
-
-static inline void kalGROTimerStart(
-	struct ADAPTER *prAdapter, uint32_t u4Timeout)
-{
-	mod_timer(&prAdapter->rRxGROTimer,
-		jiffies + MSEC_TO_JIFFIES(
-		u4Timeout));
-}
-
-static inline void kalGROTimerStop(struct ADAPTER *prAdapter)
-{
-	del_timer_sync(&prAdapter->rRxGROTimer);
-}
-
-void kalGROTimerInit(struct ADAPTER *prAdapter)
-{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
-	timer_setup(&prAdapter->rRxGROTimer,
-			kalGROTimerFunc,
-			0);
-#else
-	init_timer(&prAdapter->rRxGROTimer);
-	prAdapter->rRxGROTimer.data =
-			(unsigned long)prAdapter->prGlueInfo;
-	prAdapter->rRxGROTimer.function =
-			kalGROTimerFunc;
-#endif
-}
-
-void kalGROTimerUninit(struct ADAPTER *prAdapter)
-{
-	kalGROTimerStop(prAdapter);
-}
-
 /*----------------------------------------------------------------------------*/
 /*!
  * \brief To indicate Tput is higher than ucGROEnableTput or not.
@@ -1227,15 +1178,15 @@ void kal_gro_flush(struct ADAPTER *prAdapter, struct net_device *prDev)
 	if (CHECK_FOR_TIMEOUT(kalGetTimeTick(),
 		prNetDevPrivate->tmGROFlushTimeout,
 		prWifiVar->ucGROFlushTimeout)) {
-		kalGROTimerStop(prAdapter);
-		napi_gro_flush_list(napi);
+		napi_gro_flush(napi, false);
 		DBGLOG_LIMITED(INIT, TRACE, "napi_gro_flush:%p\n", prDev);
+#if KERNEL_VERSION(5, 4, 0) <= CFG80211_VERSION_CODE
+		prNetDevPrivate->u4PendingFlushNum = napi->rx_count;
+#else
 		prNetDevPrivate->u4PendingFlushNum = 0;
-	} else {
+#endif
+	} else
 		prNetDevPrivate->u4PendingFlushNum++;
-		kalGROTimerStart(prAdapter,
-			prWifiVar->ucGROFlushTimeout);
-	}
 
 	GET_CURRENT_SYSTIME(&prNetDevPrivate->tmGROFlushTimeout);
 }
@@ -1300,7 +1251,10 @@ uint32_t kalRxIndicateOnePkt(IN struct GLUE_INFO
 	}
 	if (!prNetDev)
 		prNetDev = prGlueInfo->prDevHandler;
-
+#if CFG_SUPPORT_SNIFFER
+	if (prGlueInfo->fgIsEnableMon)
+		prNetDev = prGlueInfo->prMonDevHandler;
+#endif
 	if (prNetDev->dev_addr == NULL) {
 		DBGLOG(RX, WARN, "dev_addr == NULL\n");
 		return WLAN_STATUS_FAILURE;
@@ -1358,7 +1312,7 @@ uint32_t kalRxIndicateOnePkt(IN struct GLUE_INFO
 	prNetDev->last_rx = jiffies;
 #endif
 
-#ifdef CFG_SUPPORT_SNIFFER_RADIOTAP
+#if CFG_SUPPORT_SNIFFER
 	if (prGlueInfo->fgIsEnableMon) {
 		skb_reset_mac_header(prSkb);
 		prSkb->ip_summed = CHECKSUM_UNNECESSARY;
@@ -4554,15 +4508,11 @@ int rx_thread(void *data)
 					->rWifiVar.u4WakeLockRxTimeout));
 				}
 			}
+#if CFG_SUPPORT_RX_GRO
+			kal_gro_flush_queue(prGlueInfo);
+#endif /* CFG_SUPPORT_RX_GRO */
 			kalTraceEnd(); /* RX_TO_OS */
 		}
-
-#if CFG_SUPPORT_RX_GRO
-		if (test_and_clear_bit(GLUE_FLAG_RX_GRO_TIMEOUT_BIT,
-				       &prGlueInfo->ulFlag)) {
-			kal_gro_flush_queue(prGlueInfo);
-		}
-#endif /* CFG_SUPPORT_RX_GRO */
 
 		kalTraceEnd(); /* rx_thread*/
 	}
@@ -5506,14 +5456,12 @@ void kalScanDone(IN struct GLUE_INFO *prGlueInfo,
  * @return   status 0 if success, error code otherwise
  */
 /*----------------------------------------------------------------------------*/
-uint8_t kalUpdateBssTimestamp(IN struct GLUE_INFO *prGlueInfo,
-		IN uint32_t u4LastScanTime)
+uint8_t kalUpdateBssTimestamp(IN struct GLUE_INFO *prGlueInfo)
 {
 	struct wiphy *wiphy;
 	struct cfg80211_registered_device *rdev;
 	struct cfg80211_internal_bss *bss = NULL;
 	struct cfg80211_bss_ies *ies;
-	uint32_t u4ScanDiffTimeMs;
 	uint64_t new_timestamp = kalGetBootTime();
 
 	ASSERT(prGlueInfo);
@@ -5530,17 +5478,12 @@ uint8_t kalUpdateBssTimestamp(IN struct GLUE_INFO *prGlueInfo,
 	/* add 1 ms to prevent scan time too short */
 	new_timestamp += 1000;
 
-	u4ScanDiffTimeMs = kalGetTimeTick() - u4LastScanTime;
-
-	/* Only update bss's TSF if TSF difference < scan time difference*/
 	spin_lock_bh(&rdev->bss_lock);
 	list_for_each_entry(bss, &rdev->bss_list, list) {
 		ies = *(struct cfg80211_bss_ies **)
 		(((size_t)&(bss->pub)) + offsetof(struct cfg80211_bss, ies));
 		if (rcu_access_pointer(bss->pub.ies) == ies) {
-			if (USEC_TO_MSEC(le64_to_cpu(new_timestamp) - ies->tsf)
-				< u4ScanDiffTimeMs)
-				ies->tsf = le64_to_cpu(new_timestamp);
+			ies->tsf = le64_to_cpu(new_timestamp);
 		} else {
 			log_limited_dbg(REQ, WARN, "Update tsf fail. bss->pub.ies=%p ies=%p\n",
 				bss->pub.ies, ies);
@@ -5709,21 +5652,6 @@ void kalSetTxEvent2Rx(struct GLUE_INFO *pr)
 	set_bit(GLUE_FLAG_RX_TO_OS_BIT, &pr->ulFlag);
 	wake_up_interruptible(&pr->waitq_rx);
 }
-
-#if CFG_SUPPORT_RX_GRO
-void kalSetGROEvent2Rx(struct GLUE_INFO *pr)
-{
-	if (!pr->rx_thread)
-		return;
-
-	KAL_WAKE_LOCK_TIMEOUT(pr->prAdapter, pr->rTimeoutWakeLock,
-			      MSEC_TO_JIFFIES(
-			      pr->prAdapter->rWifiVar.u4WakeLockThreadWakeup));
-
-	set_bit(GLUE_FLAG_RX_GRO_TIMEOUT_BIT, &pr->ulFlag);
-	wake_up_interruptible(&pr->waitq_rx);
-}
-#endif /* CFG_SUPPORT_RX_GRO */
 
 void kalSetTxCmdEvent2Hif(struct GLUE_INFO *pr)
 {
@@ -6622,7 +6550,7 @@ void kalSchedScanStopped(IN struct GLUE_INFO *prGlueInfo,
 	 */
 	if (fgDriverTriggerd) {
 		DBGLOG(SCN, INFO, "start work queue to send event\n");
-		schedule_delayed_work(&sched_workq, 0);
+		queue_delayed_work(system_power_efficient_wq, &sched_workq, 0);
 		DBGLOG(SCN, INFO, "main_thread return from %s\n", __func__);
 	}
 }
@@ -6685,7 +6613,7 @@ kalGetIPv4Address(IN struct net_device *prDev,
 			&prIfa->ifa_mask, u4AddrLen);
 		prIfa = prIfa->ifa_next;
 
-		DBGLOG(INIT, TRACE,
+		DBGLOG(INIT, INFO,
 			"IPv4 addr [%u][" IPV4STR "] mask [" IPV4STR "]\n",
 			u4NumIPv4,
 			IPV4TOSTR(&pucIpv4Addrs[u4NumIPv4*u4AddrLen]),
@@ -6724,7 +6652,7 @@ kalGetIPv6Address(IN struct net_device *prDev,
 		kalMemCopy(&pucIpv6Addrs[u4NumIPv6 * u4AddrLen],
 			   &prIfa->addr, u4AddrLen);
 
-		DBGLOG(INIT, TRACE,
+		DBGLOG(INIT, INFO,
 		       "IPv6 addr [%u][" IPV6STR "]\n", u4NumIPv6,
 		       IPV6TOSTR(&pucIpv6Addrs[u4NumIPv6 * u4AddrLen]));
 
@@ -7996,10 +7924,7 @@ inline int32_t kalPerMonStart(IN struct GLUE_INFO
 			      *prGlueInfo)
 {
 	struct PERF_MONITOR *prPerMonitor;
-#ifdef CFG_SUPPORT_SNIFFER_RADIOTAP
-	if (prGlueInfo->fgIsEnableMon)
-		return 0;
-#endif
+
 	prPerMonitor = &prGlueInfo->prAdapter->rPerMonitor;
 	DBGLOG(SW4, TEMP, "enter %s\n", __func__);
 
@@ -8103,13 +8028,6 @@ static uint32_t kalPerMonUpdate(IN struct ADAPTER *prAdapter)
 	char *pos = NULL, *end = NULL;
 	uint32_t slen;
 
-#if 0
-#ifdef CFG_SUPPORT_SNIFFER_RADIOTAP
-	if (glue->fgIsEnableMon)
-		return WLAN_STATUS_SUCCESS;
-#endif
-#endif
-
 	GET_BOOT_SYSTIME(&now);
 	last = perf->rLastUpdateTime;
 
@@ -8131,11 +8049,7 @@ static uint32_t kalPerMonUpdate(IN struct ADAPTER *prAdapter)
 	for (i = 0; i < BSS_DEFAULT_NUM; i++) {
 		ndev = wlanGetNetDev(glue, i);
 		bss = GET_BSS_INFO_BY_INDEX(prAdapter, i);
-		if (ndev && (IS_BSS_ALIVE(prAdapter, bss)
-#ifdef CFG_SUPPORT_SNIFFER_RADIOTAP
-			|| glue->fgIsEnableMon
-#endif /* CFG_SUPPORT_SNIFFER_RADIOTAP */
-		)) {
+		if (IS_BSS_ALIVE(prAdapter, bss) && ndev) {
 			currentTxBytes = ndev->stats.tx_bytes;
 			currentRxBytes = ndev->stats.rx_bytes;
 			currentTxPkts = ndev->stats.tx_packets;
@@ -8165,9 +8079,14 @@ static uint32_t kalPerMonUpdate(IN struct ADAPTER *prAdapter)
 		if (txDiffBytes[i] < 0 || rxDiffBytes[i] < 0) {
 			/* overflow should not happen */
 			DBGLOG(SW4, WARN,
-				"[%d]wrong bytes: tx[%lu][%lu][%ld], rx[%lu][%lu][%ld],\n",
-				i, currentTxBytes, lastTxBytes, txDiffBytes[i],
-				currentRxBytes, lastRxBytes, rxDiffBytes[i]);
+				"[%d]wrong bytes: tx[%llu][%lld][%lld], rx[%llu][%lld][%lld],\n",
+				i,
+				(unsigned long long) currentTxBytes,
+				(long long) lastTxBytes,
+				(long long) txDiffBytes[i],
+				(unsigned long long) currentRxBytes,
+				(long long) lastRxBytes,
+				(long long) rxDiffBytes[i]);
 			goto fail;
 		}
 
@@ -8269,14 +8188,13 @@ static uint32_t kalPerMonUpdate(IN struct ADAPTER *prAdapter)
 		);
 #undef TEMP_LOG_TEMPLATE
 #define TEMP_LOG_TEMPLATE \
-	"ndevdrp:%s drv[RM,IL,SL,RI,RT,RM,RW,RA,RB,DT,NS,IB,HS,LS,DD,ME,BD,NI," \
-	"DR,TE,CE,DN,FE,DE,IE,TME,SC,SI]:%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu," \
-	"%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu.\n"
-	DBGLOG(SW4, TRACE, TEMP_LOG_TEMPLATE,
+	"ndevdrp:%s drv[RM,IL,RI,RT,RM,RW,RA,RB,DT,NS,IB,HS,LS,DD,ME,BD,NI," \
+	"DR,TE,CE,DN]:%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu," \
+	"%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n"
+	DBGLOG(SW4, INFO, TEMP_LOG_TEMPLATE,
 		head4,
 		RX_GET_CNT(&prAdapter->rRxCtrl, RX_MPDU_TOTAL_COUNT),
 		RX_GET_CNT(&prAdapter->rRxCtrl, RX_ICS_LOG_COUNT),
-		RX_GET_CNT(&prAdapter->rRxCtrl, RX_SNIFFER_LOG_COUNT),
 		RX_GET_CNT(&prAdapter->rRxCtrl, RX_DATA_INDICATION_COUNT),
 		RX_GET_CNT(&prAdapter->rRxCtrl,	RX_DATA_REORDER_TOTAL_COUNT),
 		RX_GET_CNT(&prAdapter->rRxCtrl,	RX_DATA_REORDER_MISS_COUNT),
@@ -8295,14 +8213,7 @@ static uint32_t kalPerMonUpdate(IN struct ADAPTER *prAdapter)
 		RX_GET_CNT(&prAdapter->rRxCtrl, RX_REORDER_BEHIND_DROP_COUNT),
 		RX_GET_CNT(&prAdapter->rRxCtrl, RX_TYPE_ERR_DROP_COUNT),
 		RX_GET_CNT(&prAdapter->rRxCtrl, RX_CLASS_ERR_DROP_COUNT),
-		RX_GET_CNT(&prAdapter->rRxCtrl, RX_DST_NULL_DROP_COUNT),
-		RX_GET_CNT(&prAdapter->rRxCtrl, RX_FCS_ERR_DROP_COUNT),
-		RX_GET_CNT(&prAdapter->rRxCtrl, RX_DAF_ERR_DROP_COUNT),
-		RX_GET_CNT(&prAdapter->rRxCtrl, RX_ICV_ERR_DROP_COUNT),
-		RX_GET_CNT(&prAdapter->rRxCtrl, RX_TKIP_MIC_ERROR_DROP_COUNT),
-		RX_GET_CNT(&prAdapter->rRxCtrl, RX_PDMA_SCATTER_DATA_COUNT),
-		RX_GET_CNT(&prAdapter->rRxCtrl, RX_PDMA_SCATTER_INDICATION_COUNT)
-		);
+		RX_GET_CNT(&prAdapter->rRxCtrl, RX_DST_NULL_DROP_COUNT));
 #undef TEMP_LOG_TEMPLATE
 
 	kalTraceEvent("Tput: %llu.%03llumbps",
@@ -8563,7 +8474,7 @@ int32_t __weak kalSetCpuNumFreq(uint32_t u4CoreNum,
 
 int32_t __weak kalGetFwFlavorByPlat(uint8_t *flavor)
 {
-	DBGLOG(SW4, TRACE, "NO firmware flavor build.\n");
+	DBGLOG(SW4, INFO, "NO firmware flavor build.\n");
 	return 0;
 }
 
@@ -8740,11 +8651,6 @@ static int wlan_fb_notifier_callback(struct notifier_block
 	kalHaltUnlock();
 	return 0;
 }
-
-static struct notifier_block wlan_fb_notifier = {
-  .notifier_call = wlan_fb_notifier_callback,
-  .priority = 0x7fffffff,
-};
 
 int32_t kalFbNotifierReg(IN struct GLUE_INFO *prGlueInfo)
 {
@@ -9307,39 +9213,19 @@ int kalExternalAuthRequest(IN struct ADAPTER *prAdapter,
 	struct BSS_DESC *prBssDesc = NULL;
 	struct net_device *ndev = NULL;
 	struct GLUE_INFO *prGlueInfo = prAdapter->prGlueInfo;
-	struct BSS_INFO *prBssInfo = NULL;
-	struct P2P_ROLE_FSM_INFO *prP2pRoleFsmInfo = NULL;
 
-	prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter, uBssIndex);
+	prAisFsmInfo = aisGetAisFsmInfo(prAdapter, uBssIndex);
+	if (!prAisFsmInfo) {
+		DBGLOG(SAA, WARN,
+		       "SAE auth failed with NULL prAisFsmInfo\n");
+		return WLAN_STATUS_INVALID_DATA;
+	}
 
-	if (IS_BSS_AIS(prBssInfo)) {
-		prAisFsmInfo = aisGetAisFsmInfo(prAdapter, uBssIndex);
-		if (!prAisFsmInfo) {
-			DBGLOG(SAA, WARN,
-			       "SAE auth failed with NULL prAisFsmInfo\n");
-			return WLAN_STATUS_INVALID_DATA;
-		}
-
-		prBssDesc = prAisFsmInfo->prTargetBssDesc;
-		if (!prBssDesc) {
-			DBGLOG(SAA, WARN,
-			       "SAE auth failed without prTargetBssDesc\n");
-			return WLAN_STATUS_INVALID_DATA;
-		}
-	} else if (IS_BSS_P2P(prBssInfo)) {
-		prP2pRoleFsmInfo = p2pFuncGetRoleByBssIdx(prAdapter, uBssIndex);
-		if (!prP2pRoleFsmInfo) {
-			DBGLOG(SAA, WARN,
-			       "SAE auth failed with NULL prP2pRoleFsmInfo\n");
-			return WLAN_STATUS_INVALID_DATA;
-		}
-
-		prBssDesc = prP2pRoleFsmInfo->rJoinInfo.prTargetBssDesc;
-		if (!prBssDesc) {
-			DBGLOG(SAA, WARN,
-			       "SAE auth failed without prTargetBssDesc\n");
-			return WLAN_STATUS_INVALID_DATA;
-		}
+	prBssDesc = prAisFsmInfo->prTargetBssDesc;
+	if (!prBssDesc) {
+		DBGLOG(SAA, WARN,
+		       "SAE auth failed without prTargetBssDesc\n");
+		return WLAN_STATUS_INVALID_DATA;
 	}
 
 	ndev = wlanGetNetDev(prGlueInfo, uBssIndex);
@@ -9586,13 +9472,6 @@ static void kalDumpHifStats(IN struct ADAPTER *prAdapter)
 
 	if (!prAdapter)
 		return;
-
-#if 0
-#ifdef CFG_SUPPORT_SNIFFER_RADIOTAP
-	if (prAdapter->prGlueInfo->fgIsEnableMon)
-		return;
-#endif
-#endif
 
 	kalDumpMsduReportStats(prAdapter);
 
@@ -9909,7 +9788,6 @@ void kalPrintLog(const char *fmt, ...)
 	vaf.fmt = fmt;
 	vaf.va = &args;
 	ret = vsnprintf(buffer, sizeof(buffer), fmt, args);
-	va_end(args);
 	if (ret < 0) {
 		kalPrintLog("[%u] vsnprintf failed, ret: %d",
 			__LINE__, ret);
@@ -9919,6 +9797,7 @@ void kalPrintLog(const char *fmt, ...)
 		pr_info("%s%s", WLAN_TAG, buffer);
 	}
 
+	va_end(args);
 }
 
 
@@ -10089,10 +9968,6 @@ void kalNanHandleVendorEvent(IN struct ADAPTER *prAdapter, uint8_t *prBuffer)
 	DBGLOG(NAN, INFO, "[%s] subEvent:%d\n", __func__, u4SubEvent);
 
 	switch (u4SubEvent) {
-	case NAN_EVENT_ID_DE_EVENT_IND:
-		status = mtk_cfg80211_vendor_event_nan_event_indication(
-			prAdapter, prTlvElement->aucbody);
-		break;
 	case NAN_EVENT_DISCOVERY_RESULT:
 		status = mtk_cfg80211_vendor_event_nan_match_indication(
 			prAdapter, prTlvElement->aucbody);
@@ -10111,10 +9986,6 @@ void kalNanHandleVendorEvent(IN struct ADAPTER *prAdapter, uint8_t *prBuffer)
 		break;
 	case NAN_EVENT_SUBSCRIBE_TERMINATE_EVENT:
 		status = mtk_cfg80211_vendor_event_nan_subscribe_terminate(
-			prAdapter, prTlvElement->aucbody);
-		break;
-	case NAN_EVENT_SELF_FOLLOW_EVENT:
-		status = mtk_cfg80211_vendor_event_nan_seldflwup_indication(
 			prAdapter, prTlvElement->aucbody);
 		break;
 	case NAN_EVENT_MASTER_IND_ATTR:
@@ -10154,11 +10025,6 @@ void kalNanHandleVendorEvent(IN struct ADAPTER *prAdapter, uint8_t *prBuffer)
 #endif
 	case NAN_EVENT_NDL_DISCONNECT:
 		nanDataEngingDisconnectEvt(prAdapter, prTlvElement->aucbody);
-		break;
-	case NAN_EVENT_DISABLE_IND:
-		mtk_cfg80211_vendor_event_nan_disable_indication(
-			prAdapter, prTlvElement->aucbody);
-		break;
 	default:
 		DBGLOG(NAN, LOUD, "No match event!!\n");
 		break;

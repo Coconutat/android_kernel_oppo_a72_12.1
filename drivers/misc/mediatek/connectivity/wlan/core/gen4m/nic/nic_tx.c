@@ -147,7 +147,7 @@ static const struct TX_TC_TRAFFIC_SETTING
 
 	/* non-StaRec frame (BMC, etc...) */
 	{
-		NIC_TX_DESC_LONG_FORMAT_LENGTH, NIC_TX_BMC_REMAINING_TX_TIME,
+		NIC_TX_DESC_LONG_FORMAT_LENGTH, TX_DESC_TX_TIME_NO_LIMIT,
 		NIC_TX_DATA_DEFAULT_RETRY_COUNT_LIMIT
 	},
 };
@@ -2397,10 +2397,8 @@ void nicHifTxMsduDoneCb(IN struct ADAPTER *prAdapter,
 		KAL_SPIN_LOCK_DECLARATION();
 
 		/* Record native packet pointer for Tx done log */
-		if (prMsduInfo->prPacket && prMsduInfo->u2FrameLength >= 4) {
-			WLAN_GET_FIELD_32(&prMsduInfo->prPacket,
-					  &prMsduInfo->u4TxDoneTag);
-		}
+		WLAN_GET_FIELD_32(&prMsduInfo->prPacket,
+				  &prMsduInfo->u4TxDoneTag);
 
 		KAL_ACQUIRE_SPIN_LOCK(prAdapter,
 			SPIN_LOCK_TXING_MGMT_LIST);

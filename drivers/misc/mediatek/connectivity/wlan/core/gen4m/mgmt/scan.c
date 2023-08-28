@@ -1569,7 +1569,7 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 		 * directly check next neighborAPInfo if exist
 		 */
 		if (!IS_6G_OP_CLASS(prNeighborAPInfoField->ucOpClass)) {
-			DBGLOG(SCN, TRACE, "RNR op class(%d) is not 6G\n",
+			DBGLOG(SCN, INFO, "RNR op class(%d) is not 6G\n",
 				prNeighborAPInfoField->ucOpClass);
 
 			/* Calculate next NeighborAPInfo's index if exists */
@@ -1655,7 +1655,7 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 		/* Get RNR channel */
 		ucRnrChNum = scanGetRnrChannel(prNeighborAPInfoField);
 		if (ucRnrChNum == 0 || IS_6G_PSC_CHANNEL(ucRnrChNum)) {
-			DBGLOG(SCN, TRACE, "Not handle RNR channel(%d)!\n",
+			DBGLOG(SCN, INFO, "Not handle RNR channel(%d)!\n",
 					ucRnrChNum);
 			if (LINK_IS_EMPTY(&prAdapter->rNeighborAPInfoList))
 				cnmMemFree(prAdapter, prNeighborAPInfo);
@@ -1708,6 +1708,10 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 				*/
 				continue;
 			}
+
+			log_dbg(SCN, INFO, "RnrIe[%x][" MACSTR "]\n", i,
+				MAC2STR(&prNeighborAPInfoField->
+					aucTbttInfoSet[j + 1]));
 
 			/* If this BSSID existed and update time diff is
 			 * smaller than 20s, or existed in current scan request,
@@ -1812,13 +1816,6 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 				    prScanRequest->ucBssidMatchSsidInd[3],
 				    prScanRequest->u4IELength,
 				    prAdapter->rNeighborAPInfoList.u4NumElem);
-
-			log_dbg(SCN, INFO, "RnrIe " MACSTR " " MACSTR " " MACSTR
-					"" MACSTR "\n",
-					MAC2STR(prScanRequest->aucBssid[0]),
-					MAC2STR(prScanRequest->aucBssid[1]),
-					MAC2STR(prScanRequest->aucBssid[2]),
-					MAC2STR(prScanRequest->aucBssid[3]));
 			ucHasBssid = FALSE;
 		}
 		if (LINK_IS_EMPTY(&prAdapter->rNeighborAPInfoList))
@@ -2277,6 +2274,7 @@ struct BSS_DESC *scanAddToBssDesc(IN struct ADAPTER *prAdapter,
 	if (u2IELength > CFG_IE_BUFFER_SIZE) {
 		u2IELength = CFG_IE_BUFFER_SIZE;
 		prBssDesc->fgIsIEOverflow = TRUE;
+		DBGLOG(SCN, WARN, "IE is truncated!\n");
 	} else {
 		prBssDesc->fgIsIEOverflow = FALSE;
 	}

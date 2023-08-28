@@ -65,12 +65,6 @@ struct wpa_authenticator g_rNanWpaAuth;
  */
 uint8_t g_aucNanSecAttrBuffer[NAN_IE_BUF_MAX_SIZE];
 
-uint8_t g_aucTmpKdeAttrBufffer[NAN_KDE_ATTR_BUF_SIZE];
-uint8_t g_aucInitiatorSecSmInfo[NAN_AUTH_TOKEN_LEN];
-uint8_t g_aucMicMaterialBuffer[NAN_MIC_BUF_SIZE];
-
-
-
 /*******************************************************************************
  *                                 M A C R O S
  *******************************************************************************
@@ -780,9 +774,8 @@ nan_sec_wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 #endif
 
 	u4TotalLen = sizeof(struct _NAN_SEC_KDE_ATTR_HDR) + hdrlen;
-	memset(g_aucTmpKdeAttrBufffer, 0, NAN_KDE_ATTR_BUF_SIZE);
 
-	sm->pu1TmpKdeAttrBuf = g_aucTmpKdeAttrBufffer;
+	sm->pu1TmpKdeAttrBuf = os_zalloc(u4TotalLen);
 	sm->u4TmpKdeAttrLen = u4TotalLen;
 
 	if (sm->pu1TmpKdeAttrBuf == NULL)
@@ -874,9 +867,8 @@ nan_sec_wpa_supplicant_send_4_of_4(struct wpa_sm *sm, const unsigned char *dst,
 		return -1;
 #endif
 	u4TotalLen = sizeof(struct _NAN_SEC_KDE_ATTR_HDR) + hdrlen;
-	memset(g_aucTmpKdeAttrBufffer, 0, NAN_KDE_ATTR_BUF_SIZE);
 
-	sm->pu1TmpKdeAttrBuf = g_aucTmpKdeAttrBufffer;
+	sm->pu1TmpKdeAttrBuf = os_zalloc(u4TotalLen);
 	sm->u4TmpKdeAttrLen = u4TotalLen;
 
 	if (sm->pu1TmpKdeAttrBuf == NULL)
@@ -1000,11 +992,7 @@ nan_sec_wpa_send_eapol(
 	u4TotalLen =
 		sizeof(struct _NAN_SEC_KDE_ATTR_HDR) + keyhdrlen + key_data_len;
 
-	memset(g_aucTmpKdeAttrBufffer, 0, NAN_KDE_ATTR_BUF_SIZE);
-	if (u4TotalLen > NAN_KDE_ATTR_BUF_SIZE)
-		DBGLOG(NAN, ERROR, "[%s] Invalid length\n", __func__);
-
-	sm->pu1TmpKdeAttrBuf = g_aucTmpKdeAttrBufffer;
+	sm->pu1TmpKdeAttrBuf = os_zalloc(u4TotalLen);
 	sm->u4TmpKdeAttrLen = u4TotalLen;
 
 	if (sm->pu1TmpKdeAttrBuf == NULL)
@@ -2802,13 +2790,6 @@ nanSecNotify4wayTerminate(IN struct _NAN_NDP_INSTANCE_T *prNdp) {
 		g_prNanHapdData->conf->ssid.wpa_psk = NULL;
 	} else { /* NAN_NDP_RESPONDER */
 		/* Orignal clean up */
-		if (g_prNanWpaSupp == NULL || g_prNanWpaSupp->wpa == NULL) {
-			DBGLOG(NAN, ERROR,
-				"[%s] g_prNanWpaSupp is NULL\n",
-				__func__);
-			return 0;
-		}
-
 		g_prNanWpaSupp->wpa->rx_replay_counter_set = 0;
 		os_memset(g_prNanWpaSupp->wpa->rx_replay_counter, 0,
 			  WPA_REPLAY_COUNTER_LEN);
@@ -2868,6 +2849,7 @@ nanSecTxKdeAttrDone(IN struct _NAN_NDP_INSTANCE_T *prNdp, IN uint8_t u1DstMsg) {
 		return -1;
 	}
 
+	os_free(*ppu1SmTmpKdeAttrBuf);
 	*ppu1SmTmpKdeAttrBuf = NULL;
 	*pu4SmTmpKdeAttrLen = 0;
 	*pfgIsTxDone = TRUE;
@@ -3017,10 +2999,11 @@ nanSecNotifyMsgBodyRdy(IN struct _NAN_NDP_INSTANCE_T *prNdp,
 	*pu4SmGetMsgBodyLen = u4TxMsgLen;
 
 	if (u1SrcMsg == NAN_SEC_M1) {
-		memset(g_aucInitiatorSecSmInfo, 0, NAN_AUTH_TOKEN_LEN);
+		if (prNdp->prInitiatorSecSmInfo->pu1AuthTokenBuf != NULL)
+			os_free(prNdp->prInitiatorSecSmInfo->pu1AuthTokenBuf);
 
 		prNdp->prInitiatorSecSmInfo->pu1AuthTokenBuf =
-			g_aucInitiatorSecSmInfo;
+			os_zalloc(NAN_AUTH_TOKEN_LEN);
 		if (prNdp->prInitiatorSecSmInfo->pu1AuthTokenBuf == NULL) {
 			DBGLOG(NAN, ERROR,
 			       "[%s] os_zalloc failed for pu1AuthTokenBuf\n",
@@ -3229,6 +3212,7 @@ nanSecMicCalStaSmStep(struct wpa_sm *sm) /* Send M2, M4 */
 			break;
 		}
 
+		os_free(sm->pu1TmpKdeAttrBuf);
 		sm->pu1TmpKdeAttrBuf = NULL;
 		sm->u4TmpKdeAttrLen = 0;
 		sm->u1MicCalState = NAN_SEC_MIC_CAL_IDLE;
@@ -3282,6 +3266,7 @@ nanSecStaSmBufReset(struct wpa_sm *sm) {
 	sm->pu1GetRxMsgKdeBuf = NULL;
 	sm->u4GetRxMsgKdeLen = 0;
 
+	os_free(sm->pu1TmpKdeAttrBuf);
 	sm->pu1TmpKdeAttrBuf = NULL;
 	sm->u4TmpKdeAttrLen = 0;
 
@@ -3375,6 +3360,7 @@ nanSecMicCalApSmStep(struct wpa_state_machine *sm) /* Send M1, M3 */
 
 		sm->u1MicCalState = NAN_SEC_MIC_CAL_IDLE;
 
+		os_free(sm->pu1TmpKdeAttrBuf);
 		sm->pu1TmpKdeAttrBuf = NULL;
 		sm->u4TmpKdeAttrLen = 0;
 
@@ -3440,6 +3426,7 @@ nanSecApSmBufReset(struct wpa_state_machine *sm) {
 	sm->pu1GetRxMsgKdeBuf = NULL;
 	sm->u4GetRxMsgKdeLen = 0;
 
+	os_free(sm->pu1TmpKdeAttrBuf);
 	sm->pu1TmpKdeAttrBuf = NULL;
 	sm->u4TmpKdeAttrLen = 0;
 
@@ -3512,12 +3499,7 @@ nanSecGenM3MicMaterial(IN uint8_t *pu1AuthTokenBuf, IN const u8 *pu1M3bodyBuf,
 	}
 
 	u4TotalLen = u4M3BodyLen + NAN_AUTH_TOKEN_LEN;
-
-	memset(g_aucMicMaterialBuffer, 0, NAN_MIC_BUF_SIZE);
-	if (u4TotalLen > NAN_MIC_BUF_SIZE)
-		DBGLOG(NAN, ERROR, "[%s] Invalid length\n", __func__);
-
-	pu1MicMaterialBuf = g_aucMicMaterialBuffer;
+	pu1MicMaterialBuf = os_zalloc(u4TotalLen);
 
 	if (pu1MicMaterialBuf == NULL) {
 		DBGLOG(NAN, ERROR,

@@ -117,7 +117,7 @@ int gps_dl_dma_buf_alloc2(enum gps_dl_link_id_enum link_id)
 		return -1;
 	}
 
-	#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
+	#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 		of_dma_configure(p_dev->dev, p_dev->dev->of_node, false);
 	#else
 		of_dma_configure(p_dev->dev, p_dev->dev->of_node);

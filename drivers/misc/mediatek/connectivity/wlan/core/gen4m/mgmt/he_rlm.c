@@ -488,7 +488,6 @@ static void heRlmFillHeCapIE(
 	HE_SET_MAC_CAP_TRIGGER_PAD_DURATION(prHeCap->ucHeMacCap,
 		prWifiVar->ucTrigMacPadDur);
 
-	DBGLOG(RLM, INFO, "eNetworkType=%d\n", prBssInfo->eNetworkType);
 	/* Check HTC blacklist */
 	if (IS_BSS_AIS(prBssInfo)) {
 		if (prAisFsmInfo != NULL)
@@ -905,8 +904,6 @@ static uint32_t heRlmRecHeMcsMap(
 		prStaRec->u2HeRxMcsMapBW80 |=
 			BITS(ucHeCapMcsOwnNotSupportOffset, 15);
 	}
-	prStaRec->u2HeRxMcsMapBW80Assoc = prStaRec->u2HeRxMcsMapBW80;
-
 	if (prStaRec->u2HeRxMcsMapBW80 != u2McsMap)
 		DBGLOG(RLM, WARN, "Change HeRxMcsMapBW80 from 0x%x to 0x%x\n",
 			u2McsMap, prStaRec->u2HeRxMcsMapBW80);
@@ -947,7 +944,6 @@ static uint32_t heRlmRecHeMcsMap(
 		prStaRec->u2HeRxMcsMapBW160 = BITS(0, 15);
 		prStaRec->u2HeTxMcsMapBW160 = BITS(0, 15);
 	}
-	prStaRec->u2HeRxMcsMapBW160Assoc = prStaRec->u2HeRxMcsMapBW160;
 
 	/* BW 80+80 */
 	if (HE_IS_PHY_CAP_CHAN_WIDTH_SET_BW80P80_5G(prStaRec->ucHePhyCapInfo)) {
@@ -978,7 +974,6 @@ static uint32_t heRlmRecHeMcsMap(
 		prStaRec->u2HeRxMcsMapBW80P80 = BITS(0, 15);
 		prStaRec->u2HeTxMcsMapBW80P80 = BITS(0, 15);
 	}
-	prStaRec->u2HeRxMcsMapBW80P80Assoc = prStaRec->u2HeRxMcsMapBW80P80;
 
 	log_dbg(RLM, LOUD, "PhyCap:1st:%x,..heRlmRecHeMcsMap-80:%x,%x,160:%x,%x,80+80:%x,%x\n",
 		prStaRec->ucHePhyCapInfo[0],
@@ -1069,7 +1064,7 @@ void heRlmRecHeCapInfo(
 		HE_PHY_CAP_BYTE_NUM);
 
 #if (CFG_SUPPORT_HE_ER == 1)
-	DBGLOG(RLM, TRACE, "ER: TX:%d, RX:%d, bw:%d, 4x LTF:%d, 1X LTF:%d\n",
+	DBGLOG(RLM, INFO, "ER: TX:%d, RX:%d, bw:%d, 4x LTF:%d, 1X LTF:%d\n",
 		HE_GET_PHY_CAP_DCM_MAX_CONSTELLATION_TX(
 			prStaRec->ucHePhyCapInfo),
 		HE_GET_PHY_CAP_DCM_MAX_CONSTELLATION_RX(

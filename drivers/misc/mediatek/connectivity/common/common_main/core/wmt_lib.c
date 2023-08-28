@@ -1077,11 +1077,6 @@ VOID wmt_lib_set_bt_link_status(INT32 type, INT32 value)
 		g_bt_no_br_acl_link = value;
 }
 
-PVOID wmt_lib_consys_clock_get_regmap(VOID)
-{
-	return mtk_wcn_consys_clock_get_regmap();
-}
-
 /*
  * Allow BT to reset as long as one of the conditions is true.
  * 1. no ACL link
@@ -2644,10 +2639,7 @@ UINT8 *wmt_lib_get_fwinfor_from_emi(UINT8 section, UINT32 offset, UINT8 *buf, UI
 		if (!pAddr) {
 			WMT_ERR_FUNC("wmt-lib: get EMI virtual base address fail\n");
 		} else {
-			#ifndef OPLUS_BUG_STABILITY
-			//Remove for reduce useless log.
 			WMT_INFO_FUNC("vir addr(0x%p)\n", pAddr);
-			#endif /* OPLUS_BUG_STABILITY */
 			osal_memcpy_fromio(&buf[0], pAddr, len);
 		}
 	} else {
@@ -2681,10 +2673,7 @@ UINT8 *wmt_lib_get_fwinfor_from_emi(UINT8 section, UINT32 offset, UINT8 *buf, UI
 			if (!pAddr) {
 				WMT_ERR_FUNC("wmt-lib: get EMI virtual base address fail\n");
 			} else {
-				#ifndef OPLUS_BUG_STABILITY
-				//Remove for reduce useless log.
 				WMT_INFO_FUNC("vir addr(0x%p)\n", pAddr);
-				#endif /* OPLUS_BUG_STABILITY */
 				osal_memcpy_fromio(&buf[0], pAddr, len);
 			}
 		}

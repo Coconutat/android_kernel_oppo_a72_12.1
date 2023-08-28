@@ -276,7 +276,7 @@ void scnSendScanReqV2(IN struct ADAPTER *prAdapter)
 		COPY_MAC_ADDR(prCmdScanReq->aucBSSID,
 		&prScanParam->aucBSSID[0][0]);
 	}
-	if (!EQUAL_MAC_ADDR(prCmdScanReq->aucBSSID, "\x00\x00\x00\x00\x00\x00"))
+	if (!EQUAL_MAC_ADDR(prCmdScanReq->aucBSSID, "\xff\xff\xff\xff\xff\xff"))
 		DBGLOG(SCN, INFO, "Include BSSID "MACSTR" in probe request\n",
 			MAC2STR(prCmdScanReq->aucBSSID));
 
@@ -953,7 +953,7 @@ void scnEventScanDone(IN struct ADAPTER *prAdapter,
 
 	if (IS_FEATURE_ENABLED(prAdapter->rWifiVar.ucScanNoApRecover) &&
 		prScanInfo->fgIsSparseChannelValid &&
-		prScanDone->ucSparseChannelArrayValidNum > 5 &&
+		prScanDone->ucSparseChannelArrayValidNum > 3 &&
 		(prScanParam->eMsgId == MID_AIS_SCN_SCAN_REQ ||
 		prScanParam->eMsgId == MID_AIS_SCN_SCAN_REQ_V2) &&
 		!(prScanParam->ucScnFuncMask & ENUM_SCN_USE_PADDING_AS_BSSID)) {

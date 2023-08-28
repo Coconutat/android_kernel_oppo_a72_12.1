@@ -1110,11 +1110,6 @@ secPrivacySeekForBcEntry(IN struct ADAPTER *prAdapter,
 	if (prBSSInfo->eCurrentOPMode == OP_MODE_ACCESS_POINT)
 		fgCheckKeyId = FALSE;
 
-
-	DBGLOG_LIMITED(INIT, INFO, "OpMode:%d, NetworkType:%d, CheckKeyId:%d\n",
-		prBSSInfo->eCurrentOPMode, prBSSInfo->eNetworkType,
-		fgCheckKeyId);
-
 	/* reserve wtbl IDX 0~3 for BIP*/
 	ucStartIDX = 4;
 	ucMaxIDX = prAdapter->ucTxDefaultWlanIndex - 1;

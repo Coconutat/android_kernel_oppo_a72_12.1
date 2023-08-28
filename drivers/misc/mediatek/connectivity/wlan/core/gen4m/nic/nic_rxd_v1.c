@@ -327,9 +327,6 @@ u_int8_t nic_rxd_v1_sanity_check(
 	struct mt66xx_chip_info *prChipInfo;
 	struct HW_MAC_RX_DESC *prRxStatus;
 	u_int8_t fgDrop = FALSE;
-	struct RX_CTRL *prRxCtrl;
-
-	prRxCtrl = &prAdapter->rRxCtrl;
 
 	prChipInfo = prAdapter->chip_info;
 	prRxStatus = (struct HW_MAC_RX_DESC *)prSwRfb->prRxStatus;
@@ -407,20 +404,6 @@ u_int8_t nic_rxd_v1_sanity_check(
 			fgDrop = TRUE;	/* Drop after send de-auth  */
 		}
 #endif
-
-		if (fgDrop) {
-			if (HAL_RX_STATUS_IS_FCS_ERROR(prRxStatus))
-				RX_INC_CNT(prRxCtrl, RX_FCS_ERR_DROP_COUNT);
-
-			if (HAL_RX_STATUS_IS_ICV_ERROR(prRxStatus))
-				RX_INC_CNT(prRxCtrl, RX_ICV_ERR_DROP_COUNT);
-
-#if CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION
-			if (HAL_RX_STATUS_IS_TKIP_MIC_ERROR(prRxStatus))
-				RX_INC_CNT(prRxCtrl,
-					RX_TKIP_MIC_ERROR_DROP_COUNT);
-#endif /* CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION */
-		}
 
 		DBGLOG(RSN, TRACE, "Sanity check to drop:%d\n", fgDrop);
 	}
@@ -570,22 +553,18 @@ void nic_rxd_v1_check_wakeup_reason(
 		default:
 			if (HAL_RX_STATUS_IS_LLC_MIS(prRxStatus)) {
 				DBGLOG(RX, WARN,
-				"Undefined packet wakeup host\n");
+					"abnormal packet, Header translate fail\n");
+				DBGLOG_MEM8(RX, INFO,
+					(uint8_t *)prSwRfb->prRxStatus,
+					prChipInfo->rxd_size);
+				DBGLOG_MEM8(RX, INFO, pvHeader, u2PktLen);
 			} else {
 				DBGLOG(RX, WARN,
-					"EthType 0x%04x packet BMU[%d%d%d] TRS[%d] wakeup host\n",
-					u2Temp,
-					HAL_RX_STATUS_IS_BC(prRxStatus),
-					HAL_RX_STATUS_IS_MC(prRxStatus),
-					HAL_RX_STATUS_IS_UC2ME(prRxStatus),
-					HAL_RX_STATUS_IS_HEADER_TRAN(prRxStatus)
-					);
+					"abnormal packet, EthType 0x%04x wakeup host\n",
+					u2Temp);
+				DBGLOG_MEM8(RX, INFO,
+					pvHeader, u2PktLen > 50 ? 50:u2PktLen);
 			}
-			DBGLOG_MEM8(RX, INFO, (uint8_t *)prSwRfb->prRxStatus,
-				prChipInfo->rxd_size);
-
-			DBGLOG_MEM8(RX, INFO,
-				pvHeader, u2PktLen > 50 ? 50:u2PktLen);
 			break;
 		}
 		break;

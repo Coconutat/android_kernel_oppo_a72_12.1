@@ -320,12 +320,6 @@ void p2pRoleFsmUninit(IN struct ADAPTER *prAdapter, IN uint8_t ucRoleIdx)
 		nicFreePendingTxMsduInfo(prAdapter,
 			prP2pBssInfo->ucBssIndex, MSDU_REMOVE_BY_BSS_INDEX);
 
-		/* Indicate PM abort if the BSS is under deauth process */
-		if (prP2pBssInfo->eConnectionState == MEDIA_STATE_CONNECTED) {
-			nicPmIndicateBssAbort(prAdapter,
-				prP2pRoleFsmInfo->ucBssIndex);
-		}
-
 		/* Deactivate BSS. */
 		UNSET_NET_ACTIVE(prAdapter, prP2pRoleFsmInfo->ucBssIndex);
 
@@ -802,19 +796,16 @@ p2pRoleFsmDeauthComplete(IN struct ADAPTER *prAdapter,
 			&& (bssGetClientCount(prAdapter, prP2pBssInfo) == 0)) {
 			/* All Peer disconnected !! Stop BSS now!! */
 			p2pFuncStopComplete(prAdapter, prP2pBssInfo);
+
 			p2pRoleFsmStateTransition(prAdapter,
 				prP2pRoleFsmInfo,
 				P2P_ROLE_STATE_IDLE);
-		} else if (eOriMediaStatus != prP2pBssInfo->eConnectionState) {
+		} else if (eOriMediaStatus != prP2pBssInfo->eConnectionState)
 			/* Update the Media State if necessary */
 			nicUpdateBss(prAdapter, prP2pBssInfo->ucBssIndex);
-		}
-	} else { /* GC : Stop BSS when Deauth done */
+	} else /* GC : Stop BSS when Deauth done */
 		p2pFuncStopComplete(prAdapter, prP2pBssInfo);
-		p2pRoleFsmStateTransition(prAdapter,
-			prP2pRoleFsmInfo,
-			P2P_ROLE_STATE_IDLE);
-	}
+
 }
 
 void p2pRoleFsmDeauthTimeout(IN struct ADAPTER *prAdapter,
@@ -1977,7 +1968,8 @@ void p2pRoleFsmRunEventRadarDet(IN struct ADAPTER *prAdapter,
 					prP2pBssInfo);
 		} else {
 		p2pRoleFsmRunEventStartAP(prAdapter,
-			(struct MSG_HDR *)&prP2pConnReqInfo->rMsgStartAp);
+			(struct MSG_HDR *)
+			&prP2pConnReqInfo->rMsgStartAp);
 		}
 	}
 
@@ -2273,22 +2265,6 @@ void p2pRoleFsmRunEventConnectionRequest(IN struct ADAPTER *prAdapter,
 		prP2pConnReqMsg->u4IELen);
 	prConnReqInfo->u4BufLength = prP2pConnReqMsg->u4IELen;
 
-	switch (prP2pConnReqMsg->eAuthMode) {
-	case AUTH_MODE_SHARED:
-		prJoinInfo->ucAvailableAuthTypes =
-			(uint8_t) AUTH_TYPE_SHARED_KEY;
-		break;
-	case AUTH_MODE_WPA3_SAE:
-		prJoinInfo->ucAvailableAuthTypes =
-			(uint8_t) AUTH_TYPE_SAE;
-		break;
-	case AUTH_MODE_OPEN:
-	default:
-		prJoinInfo->ucAvailableAuthTypes =
-			(uint8_t) AUTH_TYPE_OPEN_SYSTEM;
-		break;
-	}
-
 	/* Find BSS Descriptor first. */
 	prJoinInfo->prTargetBssDesc =
 		scanP2pSearchDesc(prAdapter, prConnReqInfo);
@@ -2382,7 +2358,7 @@ void p2pRoleFsmRunEventConnectionAbort(IN struct ADAPTER *prAdapter,
 		P2P_ROLE_INDEX_2_ROLE_FSM_INFO(prAdapter,
 			prDisconnMsg->ucRoleIdx);
 
-	DBGLOG(P2P, TRACE,
+	DBGLOG(P2P, INFO,
 		"p2pFsmRunEventConnectionAbort: Connection Abort.\n");
 
 	if (!prP2pRoleFsmInfo) {
@@ -2498,7 +2474,7 @@ void p2pRoleFsmRunEventConnectionAbort(IN struct ADAPTER *prAdapter,
 				prDisconnMsg->aucTargetID);
 
 			if (prCurrStaRec) {
-				DBGLOG(P2P, TRACE,
+				DBGLOG(P2P, INFO,
 					"Disconnecting: " MACSTR "\n",
 					MAC2STR(prCurrStaRec->aucMacAddr));
 
@@ -2534,19 +2510,6 @@ void p2pRoleFsmRunEventConnectionAbort(IN struct ADAPTER *prAdapter,
 				cnmTimerStartTimer(prAdapter,
 					&(prCurrStaRec->rDeauthTxDoneTimer),
 					P2P_DEAUTH_TIMEOUT_TIME_MS);
-#if CFG_SUPPORT_802_11W
-			} else if (prP2pBssInfo
-				->u4RsnSelectedAKMSuite ==
-				RSN_AKM_SUITE_SAE) {
-				if (!completion_done(
-					&prP2pBssInfo->rDeauthComp)) {
-					DBGLOG(P2P, TRACE,
-						"Complete rDeauthComp\n");
-					complete(&prP2pBssInfo->rDeauthComp);
-				}
-				prP2pBssInfo
-					->encryptedDeauthIsInProcess = FALSE;
-#endif
 			}
 #if 0
 			LINK_FOR_EACH(prLinkEntry, prStaRecOfClientList) {
@@ -2798,8 +2761,6 @@ void p2pRoleFsmRunEventJoinComplete(IN struct ADAPTER *prAdapter,
 						prJoinInfo->u4BufLength,
 						prStaRec->u2StatusCode);
 #endif
-					prP2pRoleFsmInfo->
-						rJoinInfo.prTargetStaRec = NULL;
 				}
 
 			}
@@ -2993,7 +2954,9 @@ p2pRoleFsmRunEventScanDone(IN struct ADAPTER *prAdapter,
 				p2pFuncKeepOnConnection(prAdapter,
 					prAdapter->aprBssInfo
 						[prP2pRoleFsmInfo->ucBssIndex],
-					prP2pRoleFsmInfo);
+					prConnReqInfo,
+					&prP2pRoleFsmInfo->rChnlReqInfo,
+					&prP2pRoleFsmInfo->rScanReqInfo);
 			if ((prP2pJoinInfo->prTargetBssDesc) == NULL) {
 				eNextState = P2P_ROLE_STATE_SCAN;
 			} else {
@@ -3718,27 +3681,6 @@ void p2pRoleFsmRunEventBeaconUpdate(IN struct ADAPTER *prAdapter,
 
 		bssUpdateBeaconContent(prAdapter, prRoleP2pFsmInfo->ucBssIndex);
 
-#if (CFG_SUPPORT_WIFI_6G == 1)
-		if (prP2pBssInfo->eBand == BAND_6G) {
-			/* Update unsolicited probe response as beacon */
-			bssUpdateBeaconContentEx(prAdapter,
-				prP2pBssInfo->ucBssIndex,
-				IE_UPD_METHOD_UNSOL_PROBE_RSP);
-		}
-#endif
-
-#if CFG_SUPPORT_P2P_GO_OFFLOAD_PROBE_RSP
-		if (p2pFuncProbeRespUpdate(prAdapter,
-			prP2pBssInfo,
-			prP2pBssInfo->prBeacon->prPacket,
-			prP2pBssInfo->prBeacon->u2FrameLength,
-			IE_UPD_METHOD_UPDATE_PROBE_RSP) ==
-				WLAN_STATUS_FAILURE) {
-			DBGLOG(P2P, ERROR,
-				"Update probe resp IEs fail!\n");
-		}
-#endif
-
 		/* nicPmIndicateBssCreated(prAdapter,
 		 * NETWORK_TYPE_P2P_INDEX);
 		 */
@@ -3885,8 +3827,7 @@ p2pRoleFsmGetStaStatistics(IN struct ADAPTER *prAdapter,
 	}
 
 	/* Make sure WFD is still enabled */
-	if (prAdapter->rWifiVar.rWfdConfigureSettings.ucWfdEnable &&
-		!prAdapter->prGlueInfo->fgIsInSuspendMode) {
+	if (prAdapter->rWifiVar.rWfdConfigureSettings.ucWfdEnable) {
 		cnmTimerStartTimer(prAdapter,
 			&(prP2pRoleFsmInfo->rP2pRoleFsmGetStatisticsTimer),
 			P2P_ROLE_GET_STATISTICS_TIME);
@@ -4319,7 +4260,7 @@ static void initAcsParams(IN struct ADAPTER *prAdapter,
 		for (i = 0; i < prMsgAcsRequest->u4NumChannel; i++) {
 			prRfChannelInfo =
 				&(prMsgAcsRequest->arChannelListInfo[i]);
-			DBGLOG(REQ, TRACE, "[%d] band=%d, ch=%d\n", i,
+			DBGLOG(REQ, INFO, "[%d] band=%d, ch=%d\n", i,
 				prRfChannelInfo->eBand,
 				prRfChannelInfo->ucChannelNum);
 			prAcsReqInfo->ucBand |= BIT(prRfChannelInfo->eBand);

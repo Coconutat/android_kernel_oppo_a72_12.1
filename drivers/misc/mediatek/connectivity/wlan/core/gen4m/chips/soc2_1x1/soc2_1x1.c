@@ -255,7 +255,7 @@ struct BUS_INFO soc2_1x1_bus_info = {
 	.hifRst = NULL,
 	.initPcieInt = NULL,
 	.DmaShdlInit = asicPcieDmaShdlInit,
-	.setDmaIntMask = asicPdmaIntMaskConfig,
+	.setPdmaIntMask = asicPdmaIntMaskConfig,
 #endif /* _HIF_PCIE || _HIF_AXI */
 #if defined(_HIF_USB)
 	.u4UdmaWlCfg_0_Addr = CONNAC_UDMA_WLCFG_0,
@@ -303,7 +303,6 @@ struct ATE_OPS_T soc2_1x1AteOps = {
 	.getICapStatus = connacGetICapStatus,
 	.getICapIQData = connacGetICapIQData,
 	.getRbistDataDumpEvent = nicExtEventICapIQData,
-	.u4Architech = 1,
 };
 #endif
 
@@ -390,9 +389,6 @@ struct mt66xx_chip_info mt66xx_chip_info_soc2_1x1 = {
 	.em_interface_version = MTK_EM_INTERFACE_VERSION,
 
 	.calDebugCmd = soc2_1x1wlanCalDebugCmd,
-#if CFG_SUPPORT_MDDP_AOR
-	.isSupportMddpAOR = true,
-#endif
 };
 
 struct mt66xx_hif_driver_data mt66xx_driver_data_soc2_1x1 = {

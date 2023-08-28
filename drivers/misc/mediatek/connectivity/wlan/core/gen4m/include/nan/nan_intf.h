@@ -24,22 +24,16 @@
 /* Buffer size to generate NAN attribute */
 #define NAN_IE_BUF_MAX_SIZE 1000
 
-/* Memory leak issue, use golbal array to alloc buffer for kde/mic */
-#define NAN_KDE_ATTR_BUF_SIZE 150
-#define NAN_MIC_BUF_SIZE 350
-
-
 #define NAN_MAC_ADDR_LEN 6
 #define NAN_MAX_SOCIAL_CHANNELS 3
 
 /* NAN Maximum Lengths */
 #define NAN_MAX_SERVICE_NAME_LEN 255
 #define NAN_MAX_MATCH_FILTER_LEN 255
-#define NAN_MAX_SERVICE_SPECIFIC_INFO_LEN 255
-#define NAN_MAX_SDEA_SERVICE_SPECIFIC_INFO_LEN 255
+#define NAN_MAX_SERVICE_SPECIFIC_INFO_LEN 1024
 
 #define NAN_FW_MAX_SERVICE_NAME_LEN 32
-#define NAN_FW_MAX_MATCH_FILTER_LEN 64
+#define NAN_FW_MAX_MATCH_FILTER_LEN 32
 #define NAN_FW_MAX_SERVICE_SPECIFIC_INFO_LEN 255
 #define NAN_FW_MAX_SCID_BUF_LEN 128
 #define NAN_FW_MAX_SDEA_SERVICE_SPECIFIC_INFO_LEN 255
@@ -58,14 +52,10 @@
 #define NAN_PMK_INFO_LEN 32
 #define NAN_MAX_SCID_BUF_LEN 1024
 #define NAN_FW_MAX_SCID_BUF_LEN 128
-#define NAN_SDEA_SERVICE_SPECIFIC_INFO_LEN 255
+#define NAN_SDEA_SERVICE_SPECIFIC_INFO_LEN 1024
 #define NAN_FW_SDEA_SPECIFIC_INFO_LEN 255
 #define NAN_SECURITY_MIN_PASSPHRASE_LEN 8
 #define NAN_SECURITY_MAX_PASSPHRASE_LEN 63
-/*Max publish + subscribe numbers 4*/
-#define NAN_MAX_PUBLISH_NUM 2
-#define NAN_MAX_SUBSCRIBE_NUM 2
-#define NAN_MAX_NDP_SESSIONS 8
 #define IPV6MACLEN 8
 
 /* NAN Shared Key Security Cipher Suites Mask */
@@ -231,9 +221,7 @@ enum NanDataPathSecurityCfgStatus {
 /* Data request Responder's response */
 enum NanDataPathResponseCode {
 	NAN_DP_REQUEST_ACCEPT = 0,
-	NAN_DP_REQUEST_REJECT,
-	NAN_DP_REQUEST_COUNTER,
-	NAN_DP_REQUEST_AUTO
+	NAN_DP_REQUEST_REJECT
 };
 
 /* NAN DP channel config options */

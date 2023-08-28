@@ -514,9 +514,6 @@ void kalP2pIndicateRadarEvent(IN struct GLUE_INFO *prGlueInfo,
 void kalP2pNotifyStopApComplete(IN struct ADAPTER *prAdapter,
 		IN uint8_t ucRoleIndex);
 
-u_int8_t kalP2pIsStoppingAp(IN struct ADAPTER *prAdapter,
-	IN struct BSS_INFO *prBssInfo);
-
 void kalP2pIndicateChnlSwitch(IN struct ADAPTER *prAdapter,
 		IN struct BSS_INFO *prBssInfo);
 #endif

@@ -1717,9 +1717,6 @@ void asicConnac2xInitRxdHook(
 	prRxDescOps->nic_rxd_sanity_check = nic_rxd_v2_sanity_check;
 	prRxDescOps->nic_rxd_check_wakeup_reason =
 		nic_rxd_v2_check_wakeup_reason;
-#ifdef CFG_SUPPORT_SNIFFER_RADIOTAP
-	prRxDescOps->nic_rxd_fill_radiotap = nic_rxd_v2_fill_radiotap;
-#endif
 }
 
 
@@ -1955,17 +1952,12 @@ uint32_t downloadImgByDynMemMap(IN struct ADAPTER *prAdapter,
 #if defined(_HIF_PCIE)
 	uint32_t u4OrigValue = 0, u4ChangedValue = 0;
 #endif
-	uint8_t i;
-	uint32_t au4Buf[20];
 
 	if (eDlIdx != IMG_DL_IDX_PATCH && eDlIdx != IMG_DL_IDX_N9_FW)
 		return WLAN_STATUS_NOT_SUPPORTED;
 
 	DBGLOG(INIT, INFO, "u4Addr: 0x%x, u4Len: %u, eDlIdx: %u\n",
 			u4Addr, u4Len, eDlIdx);
-
-	if (u4Addr == 0x904000)
-		DBGLOG_MEM32(INIT, INFO, pucStartPtr, 64);
 
 	prBusInfo = prAdapter->chip_info->bus_info;
 
@@ -1995,14 +1987,6 @@ uint32_t downloadImgByDynMemMap(IN struct ADAPTER *prAdapter,
 
 	RTMP_IO_MEM_COPY(&prAdapter->prGlueInfo->rHifInfo, u4ReMapReg,
 				pucStartPtr, u4Len);
-
-	kalMemZero(au4Buf, sizeof(au4Buf));
-	if (u4Addr == 0x904000) {
-		for (i = 0; i < 16; i++)
-			RTMP_IO_READ32(&prAdapter->prGlueInfo->rHifInfo,
-				u4ReMapReg+4*i, &au4Buf[i]);
-		DBGLOG_MEM32(INIT, INFO, au4Buf, 64);
-	}
 
 #if defined(_HIF_PCIE)
 	HAL_MCR_WR(prAdapter, prBusInfo->pcie2ap_remap_2,

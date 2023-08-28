@@ -10,3 +10,6 @@ Usage:
 3. Rename Kernel floder to **kernel-4.14**
 4. Then you can compile kernel in kernel-4.14 floder.
 ***
+**Notice:**   
+MTK WLAN,BT,GPS source port from [android_device_xiaomi_cannon](https://github.com/xiaomi-mt6853-devs/android_device_xiaomi_cannon)  
+> **OPPO Open Source version** has a large number of issues.  

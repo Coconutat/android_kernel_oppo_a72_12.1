@@ -131,7 +131,7 @@ u_int8_t rsnParseRsnxIE(IN struct ADAPTER *prAdapter,
 	}
 	prRsnxeInfo->u2Cap = u2Cap;
 
-	DBGLOG(RSN, LOUD, "parse RSNXE cap: 0x%x\n",
+	DBGLOG(RSN, INFO, "parse RSNXE cap: 0x%x\n",
 		prRsnxeInfo->u2Cap);
 
 	return TRUE;
@@ -2851,18 +2851,11 @@ void rsnSaQueryRequest(IN struct ADAPTER *prAdapter, IN struct SW_RFB *prSwRfb)
 	uint16_t u2PayloadLen;
 	struct STA_RECORD *prStaRec;
 	struct ACTION_SA_QUERY_FRAME *prTxFrame;
-	uint8_t ucBssIndex;
-	if (!prAdapter)
-		return;
-
-	if (!prSwRfb)
-		return;
-
-	ucBssIndex = secGetBssIdxByRfb(prAdapter,
+	uint8_t ucBssIndex = secGetBssIdxByRfb(prAdapter,
 		prSwRfb);
 
 	prBssInfo = aisGetAisBssInfo(prAdapter, ucBssIndex);
-	if (!prBssInfo)
+	if (!prSwRfb)
 		return;
 
 	prRxFrame = (struct ACTION_SA_QUERY_FRAME *)
@@ -2902,9 +2895,6 @@ void rsnSaQueryRequest(IN struct ADAPTER *prAdapter, IN struct SW_RFB *prSwRfb)
 
 	prTxFrame = (struct ACTION_SA_QUERY_FRAME *)
 	    ((unsigned long)(prMsduInfo->prPacket) + MAC_TX_RESERVED_FIELD);
-
-	if (!prTxFrame)
-		return;
 
 	prTxFrame->u2FrameCtrl = MAC_FRAME_ACTION;
 	if (rsnCheckBipKeyInstalled(prAdapter, prStaRec))
@@ -3858,7 +3848,7 @@ uint32_t rsnCalculateFTIELen(struct ADAPTER *prAdapter, uint8_t ucBssIdx,
 {
 	struct FT_IES *prFtIEs = aisGetFtIe(prAdapter, ucBssIdx);
 
-	if (!prFtIEs->prFTIE || !prStaRec ||
+	if (!prFtIEs->prFTIE ||
 	    !rsnIsFtOverTheAir(prAdapter, ucBssIdx, prStaRec->ucIndex))
 		return 0;
 	return IE_SIZE(prFtIEs->prFTIE);

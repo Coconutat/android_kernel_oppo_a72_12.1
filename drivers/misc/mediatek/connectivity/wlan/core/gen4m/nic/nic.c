@@ -1559,45 +1559,6 @@ uint8_t nicGetS1(IN enum ENUM_BAND eBand,
 	return nicGetVhtS1(ucPrimaryChannel, ucBandwidth);
 }
 
-/* Adjusting S1 for BW20/40 */
-uint8_t nicGetHtS1(uint8_t ucPrimaryChannel,
-		    uint8_t ucBandwidth)
-{
-	/* 9.4.2.158 VHT OP: S1 = central channel for BW20/40/80 */
-	if (ucBandwidth == MAX_BW_20MHZ) {
-		return ucPrimaryChannel;
-	} else if (ucBandwidth == MAX_BW_40MHZ) {
-		if (ucPrimaryChannel >= 36 && ucPrimaryChannel <= 40)
-			return 38;
-		else if (ucPrimaryChannel >= 44 && ucPrimaryChannel <= 48)
-			return 46;
-		else if (ucPrimaryChannel >= 52 && ucPrimaryChannel <= 56)
-			return 54;
-		else if (ucPrimaryChannel >= 60 && ucPrimaryChannel <= 64)
-			return 62;
-		else if (ucPrimaryChannel >= 100 && ucPrimaryChannel <= 104)
-			return 102;
-		else if (ucPrimaryChannel >= 108 && ucPrimaryChannel <= 112)
-			return 110;
-		else if (ucPrimaryChannel >= 116 && ucPrimaryChannel <= 120)
-			return 118;
-		else if (ucPrimaryChannel >= 124 && ucPrimaryChannel <= 128)
-			return 126;
-		else if (ucPrimaryChannel >= 132 && ucPrimaryChannel <= 136)
-			return 134;
-		else if (ucPrimaryChannel >= 140 && ucPrimaryChannel <= 144)
-			return 142;
-		else if (ucPrimaryChannel >= 149 && ucPrimaryChannel <= 153)
-			return 151;
-		else if (ucPrimaryChannel >= 157 && ucPrimaryChannel <= 161)
-			return 159;
-		else
-			return 0;
-
-	}
-	return 0;
-}
-
 uint8_t nicGetVhtS1(uint8_t ucPrimaryChannel,
 		    uint8_t ucBandwidth)
 {
@@ -2557,14 +2518,9 @@ uint32_t nicEnterCtiaMode(IN struct ADAPTER *prAdapter,
 			prAdapter->fgEnCtiaPowerMode = TRUE;
 
 			ePowerMode = Param_PowerModeCAM;
-			if (fgEnCmdEvent && ucBssIdx + 1 == KAL_AIS_NUM)
-				rWlanStatus = nicConfigPowerSaveProfile(prAdapter,
-					ucBssIdx,
-					ePowerMode, fgEnCmdEvent, PS_CALLER_CTIA);
-			else
-                                rWlanStatus = nicConfigPowerSaveProfile(prAdapter,
-                                        ucBssIdx,
-                                        ePowerMode, FALSE, PS_CALLER_CTIA);
+			rWlanStatus = nicConfigPowerSaveProfile(prAdapter,
+				ucBssIdx,
+				ePowerMode, fgEnCmdEvent, PS_CALLER_CTIA);
 		}
 
 		/* 5. Disable Beacon Timeout Detection */
@@ -2604,14 +2560,9 @@ uint32_t nicEnterCtiaMode(IN struct ADAPTER *prAdapter,
 			prAdapter->fgEnCtiaPowerMode = TRUE;
 
 			ePowerMode = Param_PowerModeFast_PSP;
-                        if (fgEnCmdEvent && ucBssIdx + 1 == KAL_AIS_NUM)
-                                rWlanStatus = nicConfigPowerSaveProfile(prAdapter,
-                                        ucBssIdx,
-                                        ePowerMode, fgEnCmdEvent, PS_CALLER_CTIA);
-                        else
-                                rWlanStatus = nicConfigPowerSaveProfile(prAdapter,
-                                        ucBssIdx,
-					ePowerMode, FALSE, PS_CALLER_CTIA);
+			rWlanStatus = nicConfigPowerSaveProfile(prAdapter,
+				ucBssIdx,
+				ePowerMode, fgEnCmdEvent, PS_CALLER_CTIA);
 		}
 
 		/* 5. Enable Beacon Timeout Detection */
@@ -5199,8 +5150,6 @@ u_int8_t nicIsEcoVerEqualOrLaterTo(IN struct ADAPTER
 
 void nicSerStopTxRx(IN struct ADAPTER *prAdapter)
 {
-	struct BUS_INFO *prBusInfo = prAdapter->chip_info->bus_info;
-
 #if defined(_HIF_USB)
 	unsigned long ulFlags;
 
@@ -5231,10 +5180,6 @@ void nicSerStopTxRx(IN struct ADAPTER *prAdapter)
 	DBGLOG(NIC, WARN, "SER: Stop HIF Tx/Rx!\n");
 
 	prAdapter->ucSerState = SER_STOP_HOST_TX_RX;
-	if (prBusInfo->setDmaIntMask)
-		prBusInfo->setDmaIntMask(prAdapter->prGlueInfo,
-			BIT(DMA_INT_TYPE_TRX),
-			FALSE);
 
 	/* Force own to FW as ACK and stop HIF */
 	prAdapter->fgWiFiInSleepyState = TRUE;
@@ -5255,13 +5200,8 @@ void nicSerStopTx(IN struct ADAPTER *prAdapter)
 
 void nicSerStartTxRx(IN struct ADAPTER *prAdapter)
 {
-	struct BUS_INFO *prBusInfo = prAdapter->chip_info->bus_info;
-
 	DBGLOG(NIC, WARN, "SER: Start HIF T/R!\n");
-	if (prBusInfo->setDmaIntMask)
-		prBusInfo->setDmaIntMask(prAdapter->prGlueInfo,
-			BIT(DMA_INT_TYPE_TRX),
-			TRUE);
+
 	prAdapter->ucSerState = SER_IDLE_DONE;
 }
 

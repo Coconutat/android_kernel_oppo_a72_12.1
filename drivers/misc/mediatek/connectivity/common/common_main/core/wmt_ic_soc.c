@@ -4072,24 +4072,3 @@ static INT32 mtk_wcn_soc_calibration(void)
 	}
 	return 0;
 }
-
-void wmt_send_bt_tssi_cmd(void)
-{
-	P_WMT_GEN_CONF pWmtGenConf = NULL;
-	INT32 iRet = -1;
-	pWmtGenConf = wmt_get_gen_conf_pointer();
-
-	if (pWmtGenConf && pWmtGenConf->bt_tssi_from_wifi) {
-		if (wmt_ic_ops_soc.options & OPT_BT_TSSI_FROM_WIFI_CONFIG_NEW_OPID)
-			WMT_BT_TSSI_FROM_WIFI_CONFIG_CMD[4] = 0x10;
-
-		WMT_BT_TSSI_FROM_WIFI_CONFIG_CMD[5] = pWmtGenConf->bt_tssi_from_wifi;
-		WMT_BT_TSSI_FROM_WIFI_CONFIG_CMD[6] = (pWmtGenConf->bt_tssi_target & 0x00FF) >> 0;
-		WMT_BT_TSSI_FROM_WIFI_CONFIG_CMD[7] = (pWmtGenConf->bt_tssi_target & 0xFF00) >> 8;
-		iRet = wmt_core_init_script(bt_tssi_from_wifi_table, osal_array_size(bt_tssi_from_wifi_table));
-		if (iRet)
-			WMT_ERR_FUNC("bt_tssi_from_wifi_table fail(%d)\n", iRet);
-	}
-}
-
-

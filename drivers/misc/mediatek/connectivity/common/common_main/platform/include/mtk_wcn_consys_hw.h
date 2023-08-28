@@ -258,9 +258,6 @@ typedef UINT32(*CONSYS_IC_EMI_SET_REMAPPING_REG) (VOID);
 typedef INT32(*IC_BT_WIFI_SHARE_V33_SPIN_LOCK_INIT) (VOID);
 typedef INT32(*CONSYS_IC_CLK_GET_FROM_DTS) (struct platform_device *pdev);
 typedef INT32(*CONSYS_IC_PMIC_GET_FROM_DTS) (struct platform_device *pdev);
-typedef INT32(*CONSYS_IC_PMIC_REGISTER_DEVICE) (VOID);
-typedef INT32(*CONSYS_IC_CLOCK_REGISTER_DEVICE) (VOID);
-typedef PVOID(*CONSYS_IC_CLOCK_GET_REGMAP) (VOID);
 typedef INT32(*CONSYS_IC_READ_IRQ_INFO_FROM_DTS) (struct platform_device *pdev, PINT32 irq_num, PUINT32 irq_flag);
 typedef INT32(*CONSYS_IC_READ_REG_FROM_DTS) (struct platform_device *pdev);
 typedef UINT32(*CONSYS_IC_READ_CPUPCR) (VOID);
@@ -323,9 +320,6 @@ typedef UINT32(*CONSYS_IC_JTAG_FLAG_CTRL) (UINT32 enable);
 typedef UINT32(*CONSYS_IC_HW_OSC_EN_CTRL) (UINT32 enable);
 #endif
 
-typedef PINT32 CONSYS_IC_GET_DEBUG_REG_ARY_SIZE;
-typedef P_REG_MAP_ADDR CONSYS_IC_GET_DEBUG_REG_ARY;
-
 typedef struct _WMT_CONSYS_IC_OPS_ {
 
 	/* POS */
@@ -387,9 +381,6 @@ typedef struct _WMT_CONSYS_IC_OPS_ {
 	/* DTS - init */
 	CONSYS_IC_CLK_GET_FROM_DTS consys_ic_clk_get_from_dts;
 	CONSYS_IC_PMIC_GET_FROM_DTS consys_ic_pmic_get_from_dts;
-	CONSYS_IC_PMIC_REGISTER_DEVICE consys_ic_pmic_register_device;
-	CONSYS_IC_CLOCK_REGISTER_DEVICE consys_ic_clock_register_device;
-	CONSYS_IC_CLOCK_GET_REGMAP consys_ic_clock_get_regmap;
 	CONSYS_IC_READ_IRQ_INFO_FROM_DTS consys_ic_read_irq_info_from_dts;
 	CONSYS_IC_READ_REG_FROM_DTS consys_ic_read_reg_from_dts;
 
@@ -447,9 +438,6 @@ typedef struct _WMT_CONSYS_IC_OPS_ {
 #ifdef CONSYS_WMT_REG_SUSPEND_CB_ENABLE
 	CONSYS_IC_HW_OSC_EN_CTRL consys_ic_hw_osc_en_ctrl;
 #endif
-
-	CONSYS_IC_GET_DEBUG_REG_ARY_SIZE consys_ic_get_debug_reg_ary_size;
-	CONSYS_IC_GET_DEBUG_REG_ARY consys_ic_get_debug_reg_ary;
 } WMT_CONSYS_IC_OPS, *P_WMT_CONSYS_IC_OPS;
 /*******************************************************************************
 *                            P U B L I C   D A T A
@@ -552,13 +540,6 @@ INT32 mtk_wcn_consys_ipi_timeout_dump(VOID);
 VOID mtk_wcn_dump_util_init(UINT32 chipid);
 VOID mtk_wcn_dump_util_destroy(VOID);
 
-PVOID mtk_wcn_consys_clock_get_regmap(VOID);
-
 VOID mtk_wcn_consys_set_vcn33_1_voltage(UINT32 voltage);
-
-INT32 mtk_wcn_consys_get_debug_reg_ary_size(VOID);
-P_REG_MAP_ADDR mtk_wcn_consys_get_debug_reg_ary(VOID);
-
-struct platform_device *get_consys_device(void);
 #endif /* _MTK_WCN_CONSYS_HW_H_ */
 

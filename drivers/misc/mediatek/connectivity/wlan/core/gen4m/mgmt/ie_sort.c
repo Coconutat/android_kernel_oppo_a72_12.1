@@ -249,11 +249,12 @@ void sortAssocReqIE(IN struct ADAPTER *prAdapter,
 		cnmMgtPktAlloc(prAdapter, prMsduInfo->u2FrameLength);
 	if (prMsduInfoInOrder == NULL) {
 		DBGLOG(SAA, WARN,
-			"No PKT_INFO_T for sending MLD STA. Don't reorder IE.\n");
+			"No PKT_INFO_T for sending MLD STA. Don't reorder IE\n");
 		return;
 	}
 	pucBufferInOrder =
-		(uint8_t *) ((unsigned long) prMsduInfoInOrder->prPacket);
+		(uint8_t *) ((unsigned long) prMsduInfoInOrder->prPacket
+		+ (unsigned long) prMsduInfoInOrder->u2FrameLength);
 
 	end = prMsduInfo->u2FrameLength;
 	if (fgIsReAssoc) {

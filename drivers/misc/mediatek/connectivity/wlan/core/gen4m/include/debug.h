@@ -107,14 +107,14 @@ extern struct MIB_INFO_STAT g_arMibInfo[ENUM_BAND_NUM];
 #define DBG_CLASS_MASK          BITS(0, 7)
 
 #define DBG_LOG_LEVEL_DEFAULT \
-	(DBG_CLASS_ERROR | \
+	(DBG_CLASS_ERROR)
+#define DBG_LOG_LEVEL_MORE \
+	(DBG_LOG_LEVEL_DEFAULT | \
+	DBG_CLASS_TRACE | \
 	DBG_CLASS_WARN | \
 	DBG_CLASS_STATE | \
 	DBG_CLASS_EVENT | \
 	DBG_CLASS_INFO)
-#define DBG_LOG_LEVEL_MORE \
-	(DBG_LOG_LEVEL_DEFAULT | \
-	DBG_CLASS_TRACE)
 #define DBG_LOG_LEVEL_EXTREME \
 	(DBG_LOG_LEVEL_MORE | \
 	DBG_CLASS_LOUD)
@@ -141,7 +141,6 @@ extern struct MIB_INFO_STAT g_arMibInfo[ENUM_BAND_NUM];
 
 #define HIF_CHK_TX_HANG         BIT(1)
 #define HIF_DRV_SER             BIT(2)
-#define HIF_TRIGGER_FW_DUMP     BIT(3)
 
 #define DUMP_MEM_SIZE 64
 
@@ -645,7 +644,6 @@ enum WAKE_DATA_TYPE {
 #define DBGLOG_HEX(_Module, _Class, _StartAddr, _Length)
 #define DBGLOG_MEM8(_Module, _Class, _StartAddr, _Length)
 #define DBGLOG_MEM32(_Module, _Class, _StartAddr, _Length)
-#define DBGLOG_MEM128(_Module, _Class, _StartAddr, _Length)
 #else
 #define DBGLOG(_Mod, _Clz, _Fmt, ...) \
 	do { \
@@ -701,12 +699,6 @@ enum WAKE_DATA_TYPE {
 		if (aucDebugModule[DBG_##_Mod##_IDX] & DBG_CLASS_##_Clz) { \
 			LOG_FUNC("%s:(" #_Mod " " #_Clz ")\n", __func__); \
 			dumpMemory32((uint32_t *)(_Adr), (uint32_t)(_Len)); \
-		} \
-	}
-#define DBGLOG_MEM128(_Mod, _Clz, _Adr, _Len) \
-	{ \
-		if (aucDebugModule[DBG_##_Mod##_IDX] & DBG_CLASS_##_Clz) { \
-			dumpMemory128((uint32_t *)(_Adr), (uint32_t)(_Len)); \
 		} \
 	}
 #endif
@@ -824,8 +816,6 @@ void dumpHex(IN uint8_t *pucStartAddr, uint16_t u2Length);
 void dumpMemory8(IN uint8_t *pucStartAddr,
 		 IN uint32_t u4Length);
 void dumpMemory32(IN uint32_t *pu4StartAddr,
-		  IN uint32_t u4Length);
-void dumpMemory128(IN uint32_t *pu4StartAddr,
 		  IN uint32_t u4Length);
 void wlanPrintFwLog(uint8_t *pucLogContent,
 		    uint16_t u2MsgSize, uint8_t ucMsgType,

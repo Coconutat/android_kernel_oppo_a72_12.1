@@ -256,7 +256,7 @@ struct BUS_INFO soc2_2x2_bus_info = {
 	.hifRst = NULL,
 	.initPcieInt = NULL,
 	.DmaShdlInit = asicPcieDmaShdlInit,
-	.setDmaIntMask = asicPdmaIntMaskConfig,
+	.setPdmaIntMask = asicPdmaIntMaskConfig,
 #endif /* _HIF_PCIE || _HIF_AXI */
 #if defined(_HIF_USB)
 	.u4UdmaWlCfg_0_Addr = CONNAC_UDMA_WLCFG_0,
@@ -390,9 +390,6 @@ struct mt66xx_chip_info mt66xx_chip_info_soc2_2x2 = {
 	.em_interface_version = MTK_EM_INTERFACE_VERSION,
 
 	.calDebugCmd = soc2_2x2wlanCalDebugCmd,
-#if CFG_SUPPORT_MDDP_AOR
-	.isSupportMddpAOR = true,
-#endif
 };
 
 struct mt66xx_hif_driver_data mt66xx_driver_data_soc2_2x2 = {

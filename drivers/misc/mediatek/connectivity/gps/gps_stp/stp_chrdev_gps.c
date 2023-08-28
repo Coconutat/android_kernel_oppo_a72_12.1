@@ -632,7 +632,11 @@ static int GPS_hw_suspend(UINT8 mode)
 			return -EINVAL; /* Stands for not support */
 
 #ifdef MTK_GENERIC_HAL
+#ifdef CONFIG_GPSL5_SUPPORT
 		wmt_okay = mtk_wmt_gps_l1_suspend_ctrl(MTK_WCN_BOOL_TRUE);
+#else
+		wmt_okay = mtk_wmt_gps_suspend_ctrl(MTK_WCN_BOOL_TRUE);
+#endif
 #else
 #ifdef CONFIG_GPSL5_SUPPORT
 		wmt_okay = mtk_wmt_gps_l1_suspend_ctrl(MTK_WCN_BOOL_TRUE);
@@ -678,7 +682,11 @@ static int GPS_hw_resume(UINT8 mode)
 		GPS_WARN_FUNC("gps_hold_wake_lock(1)\n");
 
 #ifdef MTK_GENERIC_HAL
+#ifdef CONFIG_GPSL5_SUPPORT
 		wmt_okay = mtk_wmt_gps_l1_suspend_ctrl(MTK_WCN_BOOL_FALSE);
+#else
+		wmt_okay = mtk_wmt_gps_suspend_ctrl(MTK_WCN_BOOL_FALSE);
+#endif
 #else
 #ifdef CONFIG_GPSL5_SUPPORT
 		wmt_okay = mtk_wmt_gps_l1_suspend_ctrl(MTK_WCN_BOOL_FALSE);
@@ -1063,8 +1071,8 @@ static int GPS_open(struct inode *inode, struct file *file)
 #if 1				/* GeorgeKuo: turn on function before check stp ready */
 	/* turn on BT */
 #ifdef MTK_GENERIC_HAL
-	if (!IS_ERR(g_gps_lna_pinctrl_ptr))
-		gps_lna_pin_ctrl(GPS_DATA_LINK_ID0, true, false);
+	if (IS_ERR(g_gps_lna_pinctrl_ptr))
+	gps_lna_pin_ctrl(GPS_DATA_LINK_ID0, true, false);
 #else
 #ifdef CONFIG_GPS_CTRL_LNA_SUPPORT
 	gps_lna_pin_ctrl(GPS_DATA_LINK_ID0, true, false);
@@ -1142,8 +1150,8 @@ static int GPS_close(struct inode *inode, struct file *file)
 	up(&fwctl_mtx);
 #endif
 #ifdef MTK_GENERIC_HAL
-	if (!IS_ERR(g_gps_lna_pinctrl_ptr))
-		gps_lna_pin_ctrl(GPS_DATA_LINK_ID0, false, false);
+	if (IS_ERR(g_gps_lna_pinctrl_ptr))
+	gps_lna_pin_ctrl(GPS_DATA_LINK_ID0, false, false);
 #else
 #ifdef CONFIG_GPS_CTRL_LNA_SUPPORT
 	gps_lna_pin_ctrl(GPS_DATA_LINK_ID0, false, false);
@@ -1171,22 +1179,22 @@ _out:
 	return ret;
 }
 
-int gps_stp_get_md_status(struct device *dev)
+int gps_stp_get_reserved_memory_lk(struct device *dev)
 {
 	struct device_node *node;
 
 	node = dev->of_node;
 	if (!node) {
-		pr_info("gps_stp_get_md_status: unable to get gps node\n");
+		pr_info("gps_stp_get_reserved_memory_lk: unable to get gps node\n");
 		return -1;
 	}
 
 	if (of_property_read_u32(node, "b13b14-status-addr", &md_status_addr)) {
-		pr_info("gps_stp_get_md_status: unable to get b13b14-status-addr\n");
+		pr_info("gps_stp_get_reserved_memory_lk: unable to get b13b14-status-addr\n");
 		return -1;
 	}
 
-	pr_info("gps_stp_get_md_status md_status_addr 0x%x\n", md_status_addr);
+	pr_info("gps_stp_get_reserved_memory_lk md_status_addr 0x%x\n", md_status_addr);
 
 	return 0;
 

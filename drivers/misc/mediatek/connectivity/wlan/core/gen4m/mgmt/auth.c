@@ -475,7 +475,7 @@ authSendAuthFrame(IN struct ADAPTER *prAdapter,
 	     AUTH_TRANSACTION_SEQENCE_NUM_FIELD_LEN + STATUS_CODE_FIELD_LEN);
 
 	/* 4 <3> Update information of MSDU_INFO_T */
-	nicTxSetPktLifeTime(prMsduInfo, 200);
+	nicTxSetPktLifeTime(prMsduInfo, 100);
 	nicTxSetPktRetryLimit(prMsduInfo, TX_DESC_TX_COUNT_NO_LIMIT);
 	nicTxSetForceRts(prMsduInfo, TRUE);
 
@@ -609,9 +609,7 @@ uint32_t authCheckRxAuthFrameTransSeq(IN struct ADAPTER *prAdapter,
 	}
 
 	prStaRec = cnmGetStaRecByIndex(prAdapter, prSwRfb->ucStaRecIdx);
-	if (prStaRec &&
-		(IS_STA_IN_AIS(prStaRec) ||
-		(IS_STA_IN_P2P(prStaRec) && IS_CLIENT_STA(prStaRec)))) {
+	if (prStaRec && IS_STA_IN_AIS(prStaRec)) {
 		if (prStaRec->eAuthAssocState == SAA_STATE_EXTERNAL_AUTH) {
 			saaFsmRunEventRxAuth(prAdapter, prSwRfb);
 			return WLAN_STATUS_SUCCESS;
@@ -1150,7 +1148,7 @@ authSendDeauthFrame(IN struct ADAPTER *prAdapter,
 	if (rsnCheckBipKeyInstalled(prAdapter, prStaRec)) {
 		/* 4.3.3.1 send unprotected deauth reason 6/7 */
 		if (prStaRec->rPmfCfg.fgRxDeauthResp != TRUE) {
-			DBGLOG(RSN, TRACE,
+			DBGLOG(RSN, INFO,
 			       "Deauth Set MSDU_OPT_PROTECTED_FRAME\n");
 			nicTxConfigPktOption(prMsduInfo,
 					     MSDU_OPT_PROTECTED_FRAME, TRUE);
@@ -1354,7 +1352,7 @@ uint32_t authCalculateRSNIELen(struct ADAPTER *prAdapter, uint8_t ucBssIdx,
 {
 	struct FT_IES *prFtIEs = aisGetFtIe(prAdapter, ucBssIdx);
 
-	if (!prFtIEs->prRsnIE || !prStaRec ||
+	if (!prFtIEs->prRsnIE ||
 	    !rsnIsFtOverTheAir(prAdapter, ucBssIdx, prStaRec->ucIndex))
 		return 0;
 	return IE_SIZE(prFtIEs->prRsnIE);

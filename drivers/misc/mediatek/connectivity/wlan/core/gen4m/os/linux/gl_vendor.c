@@ -1407,7 +1407,7 @@ int mtk_cfg80211_vendor_llstats_get_info(struct wiphy *wiphy,
 		ptr += sizeof(uint32_t);
 
 		ptr += fill_radio(ptr, src->radio, ENUM_BAND_NUM, prAdapter);
-		DBGLOG(REQ, TRACE, "Collected %u bytes for LLS", ptr - buf);
+		DBGLOG(REQ, INFO, "Collected %u bytes for LLS", ptr - buf);
 
 		skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, ptr - buf);
 		if (!skb) {
@@ -1909,7 +1909,8 @@ int mtk_cfg80211_vendor_get_version(struct wiphy *wiphy,
 	if (attrlist->nla_type == LOGGER_ATTRIBUTE_DRIVER_VER) {
 		char aucDriverVersionStr[] = STR(NIC_DRIVER_MAJOR_VERSION) "_"
 					     STR(NIC_DRIVER_MINOR_VERSION) "_"
-					     STR(NIC_DRIVER_SERIAL_VERSION);
+					     STR(NIC_DRIVER_SERIAL_VERSION) "-"
+					     STR(DRIVER_BUILD_DATE);
 
 		u2Len = kalStrLen(aucDriverVersionStr);
 		DBGLOG(REQ, TRACE, "Get driver version len: %d\n", u2Len);
@@ -1933,14 +1934,7 @@ int mtk_cfg80211_vendor_get_version(struct wiphy *wiphy,
 				kalMemCopy(aucVersionBuf,
 					prAdapter->rVerInfo.aucReleaseManifest,
 					u2CopySize);
-                        else {
-                               DBGLOG(REQ, INFO, "No FW manifest version, use Ram Built Date.");
-                               u2CopySize = sizeof(prAdapter->rVerInfo.rCommonTailer.aucRamBuiltDate);
-                               kalMemCopy(aucVersionBuf,
-                                       prAdapter->rVerInfo.rCommonTailer.aucRamBuiltDate,
-                                       u2CopySize);
-                        }
-               }
+		}
 	}
 
 	DBGLOG(REQ, INFO, "Get version(%d)=[%s]\n", u2CopySize, aucVersionBuf);
@@ -2211,9 +2205,11 @@ int mtk_cfg80211_vendor_set_multista_primary_connection(struct wiphy *wiphy,
 	if (gprWdev[AIS_DEFAULT_INDEX] && u4InterfaceIdx ==
 		gprWdev[AIS_DEFAULT_INDEX]->netdev->ifindex)
 		u4AisIndex = AIS_DEFAULT_INDEX;
+#if CFG_SUPPORT_DUAL_STA
 	else if (gprWdev[AIS_SECONDARY_INDEX] && u4InterfaceIdx ==
 		gprWdev[AIS_SECONDARY_INDEX]->netdev->ifindex)
 		u4AisIndex = AIS_SECONDARY_INDEX;
+#endif
 	else {
 		DBGLOG(REQ, INFO, "No match with gprWdev\n");
 		return -EINVAL;
@@ -2338,9 +2334,9 @@ int mtk_cfg80211_vendor_get_preferred_freq_list(struct wiphy
 		return -EINVAL;
 	}
 
-	DBGLOG(P2P, TRACE, "num. of preferred freq list = %d\n", num_freq_list);
+	DBGLOG(P2P, INFO, "num. of preferred freq list = %d\n", num_freq_list);
 	for (i = 0; i < num_freq_list; i++)
-		DBGLOG(P2P, TRACE, "dump preferred freq list[%d] = %d\n",
+		DBGLOG(P2P, INFO, "dump preferred freq list[%d] = %d\n",
 			i, freq_list[i]);
 
 	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, sizeof(u32) +
@@ -3033,14 +3029,12 @@ int mtk_cfg80211_vendor_get_trx_stats(struct wiphy *wiphy,
 	}
 	aucTlvList = (struct STATS_TRX_TLV_T *) kalMemAlloc(u4MaxTlvSize,
 		VIR_MEM_TYPE);
-
 	if (!aucTlvList) {
 		DBGLOG(REQ, ERROR,
 			"Can not alloc memory for stats info\n");
 		i4Status = -ENOMEM;
 		goto err_handle_label;
 	}
-
 	kalMemZero(aucTlvList, u4MaxTlvSize);
 	statsGetTxInfoHdlr(prGlueInfo, aucTlvList);
 	if (unlikely(nla_put(skb, WIFI_ATTRIBUTE_STATS_TX,
