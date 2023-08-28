@@ -1,7 +1,5 @@
 # OPPO A72 5G Kernel  
 Kernel Version:4.14.186  
-***  
-Still in TODO,not complted!  
 ***
 Usage:  
 1. Clone this Repo in a **empty floder**.  
@@ -17,6 +15,6 @@ MTK WLAN,BT,GPS source port from [android_device_xiaomi_cannon](https://github.c
 This branch Support KernelSU.   
 ***
 ## Contributors  
-@Coconutat
-@jsbsbxjxh66
+@Coconutat  
+@jsbsbxjxh66  
 > [jsbsbxjxh66](https://github.com/wu17481748)
